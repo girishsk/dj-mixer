@@ -5,6 +5,8 @@ A browser-based professional DJ workstation. Add tracks from YouTube or upload y
 ![DJ Mixer](https://img.shields.io/badge/stack-Flask%20%2B%20Web%20Audio%20API-00ffc3?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square)
 
+![DJ Mixer Screenshot](static/screenshot.png)
+
 ---
 
 ## Features
