@@ -73,7 +73,6 @@ def analyze():
     if not os.path.exists(mp3):
         try:
             import yt_dlp
-            node_bin = os.popen('which node').read().strip() or 'node'
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(CACHE_DIR, f'{track_id}.%(ext)s'),
@@ -85,7 +84,6 @@ def analyze():
                 'quiet': True,
                 'no_warnings': True,
                 'nocheckcertificate': True,
-                'js_runtimes': f'nodejs:{node_bin}',
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)

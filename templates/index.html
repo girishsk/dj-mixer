@@ -2018,6 +2018,7 @@ async function playMix() {
 }
 
 function stopMix() {
+  if (state.audioCtx?.state === 'suspended') state.audioCtx.resume();
   state.mixSources.forEach(s => { try { s.stop(); } catch(e){} });
   state.mixGains.forEach(g => { try { g.disconnect(); } catch(e){} });
   state.mixSources  = [];
@@ -2037,28 +2038,11 @@ function stopMix() {
 }
 
 function pauseMix() {
-  if (!state.mixPlaying) return;
-  const pos = state.audioCtx.currentTime - state.mixStartTime;
-  // Find which segment we're currently in
-  const seq = state.mixPlan?.sequence || [];
-  let segIdx = 0;
-  for (let i = 0; i < seq.length; i++) {
-    if (pos >= seq[i].start_time) segIdx = i;
-  }
-  state.mixPauseSegIndex = segIdx;
-
-  state.mixSources.forEach(s => { try { s.stop(); } catch(e){} });
-  state.mixGains.forEach(g => { try { g.disconnect(); } catch(e){} });
-  state.mixSources  = [];
-  state.mixGains    = [];
-  state.mixPlaying  = false;
-  state.mixPaused   = true;
-  state.analyserMix = null;
+  if (!state.mixPlaying || !state.audioCtx) return;
+  state.audioCtx.suspend();
+  state.mixPlaying = false;
+  state.mixPaused  = true;
   if (state.mixRAF) { cancelAnimationFrame(state.mixRAF); state.mixRAF = null; }
-
-  // Freeze playhead
-  const ph = document.getElementById('mixPlayhead');
-  ph.style.left = (Math.min(pos, state.mixDuration) * TL_PX_PER_SEC) + 'px';
 
   document.getElementById('playMixBtn').textContent = '▶ RESUME';
   document.getElementById('playMixBtn').disabled  = false;
@@ -2068,9 +2052,17 @@ function pauseMix() {
 }
 
 function resumeMix() {
-  if (!state.mixPlan || !state.mixPaused) return;
-  state.mixPaused = false;
-  playMixFrom(state.mixPauseSegIndex ?? 0);
+  if (!state.mixPlan || !state.mixPaused || !state.audioCtx) return;
+  state.audioCtx.resume();
+  state.mixPlaying = true;
+  state.mixPaused  = false;
+
+  document.getElementById('playMixBtn').textContent = '▶ PLAYING';
+  document.getElementById('playMixBtn').disabled  = true;
+  document.getElementById('pauseMixBtn').disabled = false;
+  document.getElementById('stopMixBtn').disabled  = false;
+  setStatus('PLAYING MIX…');
+  animateMixPlayhead();
 }
 
 function animateMixPlayhead() {
