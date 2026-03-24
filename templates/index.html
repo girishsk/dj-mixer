@@ -850,6 +850,7 @@ header{
         <option value="3">BPM Climb</option>
         <option value="4">Random</option>
       </select>
+      <button class="btn" style="background:transparent;border:1px solid var(--neon3);color:var(--neon3)" id="shuffleBtn" disabled title="Re-shuffle the same tracks into a new random sequence">⇄ SHUFFLE</button>
       <button class="btn btn-green" id="playMixBtn" disabled>▶ PLAY MIX</button>
       <button class="btn btn-red"   id="stopMixBtn" disabled>■ STOP</button>
       <button class="btn btn-blue"  id="exportMp3Btn" disabled>⬇ EXPORT MP3</button>
@@ -1521,6 +1522,7 @@ async function generateMix() {
     document.getElementById('playMixBtn').disabled = false;
     document.getElementById('exportMp3Btn').disabled = false;
     document.getElementById('exportBtn').disabled = false;
+    document.getElementById('shuffleBtn').disabled = false;
     document.getElementById('timelineWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
     loadSavedMixes();
   } catch(err) {
@@ -1531,6 +1533,48 @@ async function generateMix() {
 
 document.getElementById('seqGenerateBtn').addEventListener('click', generateMix);
 document.getElementById('generateMixBtn').addEventListener('click', generateMix);
+
+document.getElementById('shuffleBtn').addEventListener('click', async () => {
+  if (!state.mixPlan) { toast('Generate a mix first', 'warn'); return; }
+  // Extract the tracks from the current mix plan catalogue and re-generate with variation=4 (Random)
+  const tracks = Object.values(state.mixPlan.tracks || {});
+  if (tracks.length < 2) { toast('Not enough tracks in current mix', 'warn'); return; }
+  const btn = document.getElementById('shuffleBtn');
+  btn.disabled = true; btn.textContent = '⏳ SHUFFLING…';
+  setStatus('GENERATING MIX…');
+  try {
+    // Fetch full cached metadata for each track so analysis fields are present
+    const enriched = await Promise.all(tracks.map(async t => {
+      try {
+        const r = await fetch(`/api/waveform/${t.track_id}`);
+        const w = await r.json();
+        return { ...t, ...w, _status: 'ready' };
+      } catch { return { ...t, _status: 'ready' }; }
+    }));
+    const res  = await fetch('/api/generate_mix', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ tracks: enriched, variation: 4 }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    state.mixPlan = data;
+    stopMix();
+    renderTimeline(data);
+    const durStr = fmtTime(data.total_duration);
+    document.getElementById('seqInfo').textContent =
+      `${data.track_count} tracks · ${data.transitions.length} transitions · ${durStr} · ${data.variation_name}`;
+    document.getElementById('playMixBtn').disabled = false;
+    document.getElementById('exportMp3Btn').disabled = false;
+    document.getElementById('exportBtn').disabled = false;
+    toast(`New shuffle saved: "${data.name}"`, 'success');
+    loadSavedMixes();
+  } catch(e) {
+    toast('Shuffle failed: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = '⇄ SHUFFLE';
+  setStatus('READY');
+});
 
 document.getElementById('exportBtn').addEventListener('click', () => {
   if (!state.mixPlan) { toast('Generate a mix first', 'warn'); return; }
@@ -1652,6 +1696,7 @@ async function loadMix(mixId) {
     document.getElementById('playMixBtn').disabled = false;
     document.getElementById('exportMp3Btn').disabled = false;
     document.getElementById('exportBtn').disabled = false;
+    document.getElementById('shuffleBtn').disabled = false;
     document.getElementById('timelineWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
     toast(`Loaded: "${data.name}"`, 'success');
   } catch(e) {
