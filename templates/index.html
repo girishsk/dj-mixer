@@ -852,6 +852,7 @@ header{
       </select>
       <button class="btn" style="background:transparent;border:1px solid var(--neon3);color:var(--neon3)" id="shuffleBtn" disabled title="Re-shuffle the same tracks into a new random sequence">⇄ SHUFFLE</button>
       <button class="btn btn-green" id="playMixBtn" disabled>▶ PLAY MIX</button>
+      <button class="btn" style="background:transparent;border:1px solid var(--yellow);color:var(--yellow)" id="pauseMixBtn" disabled>⏸ PAUSE</button>
       <button class="btn btn-red"   id="stopMixBtn" disabled>■ STOP</button>
       <button class="btn btn-blue"  id="exportMp3Btn" disabled>⬇ EXPORT MP3</button>
       <button class="btn" style="background:#1a2a44;border:1px solid var(--border)" id="exportBtn" disabled>⬇ JSON</button>
@@ -958,6 +959,8 @@ const state = {
   mixSources: [],
   mixGains: [],
   mixPlaying: false,
+  mixPaused: false,
+  mixPausePos: 0,
   mixStartTime: 0,
   analyserMix: null,
   mixDuration: 0,
@@ -1988,8 +1991,10 @@ async function playMix() {
       if (i === plan.sequence.length - 1) {
         // last track finished
         state.mixPlaying = false;
-        document.getElementById('playMixBtn').disabled = false;
-        document.getElementById('stopMixBtn').disabled = true;
+        document.getElementById('playMixBtn').textContent = '▶ PLAY MIX';
+        document.getElementById('playMixBtn').disabled  = false;
+        document.getElementById('pauseMixBtn').disabled = true;
+        document.getElementById('stopMixBtn').disabled  = true;
         document.getElementById('mixPlayhead').style.display = 'none';
         setStatus('READY');
         toast('Mix finished!', 'success', 3000);
@@ -2001,8 +2006,11 @@ async function playMix() {
   });
 
   state.mixPlaying = true;
-  document.getElementById('playMixBtn').disabled = true;
-  document.getElementById('stopMixBtn').disabled = false;
+  state.mixPaused  = false;
+  document.getElementById('playMixBtn').textContent = '▶ PLAYING';
+  document.getElementById('playMixBtn').disabled  = true;
+  document.getElementById('pauseMixBtn').disabled = false;
+  document.getElementById('stopMixBtn').disabled  = false;
   setStatus('PLAYING MIX…');
   toast('▶ Mix playing — sit back and enjoy!', 'success', 4000);
 
@@ -2012,15 +2020,146 @@ async function playMix() {
 function stopMix() {
   state.mixSources.forEach(s => { try { s.stop(); } catch(e){} });
   state.mixGains.forEach(g => { try { g.disconnect(); } catch(e){} });
-  state.mixSources = [];
-  state.mixGains   = [];
-  state.mixPlaying = false;
+  state.mixSources  = [];
+  state.mixGains    = [];
+  state.mixPlaying  = false;
+  state.mixPaused   = false;
+  state.mixPausePos = 0;
   state.analyserMix = null;
   if (state.mixRAF) { cancelAnimationFrame(state.mixRAF); state.mixRAF = null; }
   document.getElementById('mixPlayhead').style.display = 'none';
-  document.getElementById('playMixBtn').disabled = false;
-  document.getElementById('stopMixBtn').disabled = true;
+  document.getElementById('playMixBtn').textContent = '▶ PLAY MIX';
+  document.getElementById('playMixBtn').disabled  = false;
+  document.getElementById('pauseMixBtn').disabled = true;
+  document.getElementById('pauseMixBtn').textContent = '⏸ PAUSE';
+  document.getElementById('stopMixBtn').disabled  = true;
   setStatus('READY');
+}
+
+function pauseMix() {
+  if (!state.mixPlaying) return;
+  state.mixPausePos = state.audioCtx.currentTime - state.mixStartTime;
+  state.mixSources.forEach(s => { try { s.stop(); } catch(e){} });
+  state.mixGains.forEach(g => { try { g.disconnect(); } catch(e){} });
+  state.mixSources  = [];
+  state.mixGains    = [];
+  state.mixPlaying  = false;
+  state.mixPaused   = true;
+  state.analyserMix = null;
+  if (state.mixRAF) { cancelAnimationFrame(state.mixRAF); state.mixRAF = null; }
+  document.getElementById('playMixBtn').textContent = '▶ RESUME';
+  document.getElementById('pauseMixBtn').disabled   = true;
+  document.getElementById('stopMixBtn').disabled    = false;
+  // Freeze playhead in place
+  const ph = document.getElementById('mixPlayhead');
+  ph.style.left = (Math.min(state.mixPausePos, state.mixDuration) * TL_PX_PER_SEC) + 'px';
+  setStatus('MIX PAUSED');
+}
+
+async function resumeMix() {
+  if (!state.mixPlan || !state.mixPaused) return;
+  const plan     = state.mixPlan;
+  const pausePos = state.mixPausePos;
+
+  // Find which segment the pause landed in
+  const seq = plan.sequence;
+  let fromIndex = seq.length - 1;
+  for (let i = 0; i < seq.length; i++) {
+    if (pausePos < seq[i].end_time) { fromIndex = i; break; }
+  }
+  const firstSeg         = seq[fromIndex];
+  const withinSegSecs    = Math.max(0, pausePos - firstSeg.start_time);
+  const firstAudioOffset = (firstSeg.audio_offset || 0) + withinSegSecs;
+  const firstDuration    = firstSeg.end_time - firstSeg.start_time - withinSegSecs;
+
+  if (firstDuration <= 0.5) {
+    // Too little left in this segment — jump to next
+    return resumeFrom(fromIndex + 1 < seq.length ? fromIndex + 1 : fromIndex, 0);
+  }
+  return resumeFrom(fromIndex, firstAudioOffset, firstDuration, pausePos);
+}
+
+async function resumeFrom(fromIndex, firstAudioOffset, firstDuration, resumePos) {
+  const plan = state.mixPlan;
+  if (!plan || fromIndex >= plan.sequence.length) return;
+  state.mixPaused = false;
+
+  ensureAudioCtx();
+  const segs = plan.sequence.slice(fromIndex);
+  setStatus('LOADING…');
+
+  const buffers = {};
+  for (const seg of segs) {
+    try { buffers[seg.track_id] = await fetchAndDecodeAudio(seg.track_id); }
+    catch(e) { toast(`Cannot load "${seg.title}"`, 'error'); setStatus('READY'); return; }
+  }
+
+  const crossfadeIn = {};
+  plan.transitions.forEach(tr => { crossfadeIn[tr.to_track] = tr.crossfade_duration; });
+
+  const baseTime     = state.audioCtx.currentTime + 0.1;
+  const startOffset  = resumePos ?? plan.sequence[fromIndex].start_time;
+  state.mixStartTime = baseTime - startOffset;
+  state.mixDuration  = plan.total_duration;
+  state.mixSources   = [];
+  state.mixGains     = [];
+
+  const mixAn = state.audioCtx.createAnalyser();
+  mixAn.fftSize = 512; mixAn.smoothingTimeConstant = 0.75;
+  mixAn.connect(state.audioCtx.destination);
+  state.analyserMix = mixAn;
+
+  segs.forEach((seg, idx) => {
+    const buf = buffers[seg.track_id];
+    if (!buf) return;
+    const isFirst   = idx === 0;
+    const gain      = state.audioCtx.createGain();
+    gain.connect(mixAn);
+    const src       = state.audioCtx.createBufferSource();
+    src.buffer      = buf;
+    src.playbackRate.value = seg.playback_rate || 1.0;
+    src.connect(gain);
+
+    const trackStart = baseTime + (seg.start_time - startOffset);
+    const fadeInDur  = isFirst ? 0 : (crossfadeIn[seg.track_id] || 0);
+    const fadeOutDur = seg.crossfade_out || 0;
+    const transOutAt = baseTime + (seg.transition_out - startOffset);
+
+    gain.gain.cancelScheduledValues(trackStart);
+    gain.gain.setValueAtTime(fadeInDur > 0 ? 0 : 1, trackStart);
+    if (fadeInDur > 0) gain.gain.linearRampToValueAtTime(1, trackStart + fadeInDur);
+    if (idx < segs.length - 1 && fadeOutDur > 0) {
+      gain.gain.setValueAtTime(1, transOutAt);
+      gain.gain.linearRampToValueAtTime(0, transOutAt + fadeOutDur);
+    }
+
+    const audioOff = isFirst ? (firstAudioOffset ?? seg.audio_offset || 0) : (seg.audio_offset || 0);
+    const dur      = isFirst && firstDuration != null ? firstDuration : seg.end_time - seg.start_time;
+    src.start(trackStart, audioOff, dur);
+
+    src.onended = () => {
+      if (idx === segs.length - 1) {
+        state.mixPlaying = false;
+        document.getElementById('playMixBtn').textContent = '▶ PLAY MIX';
+        document.getElementById('playMixBtn').disabled  = false;
+        document.getElementById('pauseMixBtn').disabled = true;
+        document.getElementById('stopMixBtn').disabled  = true;
+        document.getElementById('mixPlayhead').style.display = 'none';
+        setStatus('READY');
+        toast('Mix finished!', 'success', 3000);
+      }
+    };
+    state.mixSources.push(src);
+    state.mixGains.push(gain);
+  });
+
+  state.mixPlaying = true;
+  document.getElementById('playMixBtn').textContent = '▶ PLAYING';
+  document.getElementById('playMixBtn').disabled  = true;
+  document.getElementById('pauseMixBtn').disabled = false;
+  document.getElementById('stopMixBtn').disabled  = false;
+  setStatus('PLAYING MIX…');
+  animateMixPlayhead();
 }
 
 function animateMixPlayhead() {
@@ -2123,13 +2262,20 @@ async function playMixFrom(fromIndex) {
   });
 
   state.mixPlaying = true;
-  document.getElementById('playMixBtn').disabled = true;
-  document.getElementById('stopMixBtn').disabled = false;
+  state.mixPaused  = false;
+  document.getElementById('playMixBtn').textContent = '▶ PLAYING';
+  document.getElementById('playMixBtn').disabled  = true;
+  document.getElementById('pauseMixBtn').disabled = false;
+  document.getElementById('stopMixBtn').disabled  = false;
   setStatus(`PLAYING MIX from track ${fromIndex + 1}`);
   animateMixPlayhead();
 }
 
-document.getElementById('playMixBtn').addEventListener('click', playMix);
+document.getElementById('playMixBtn').addEventListener('click', () => {
+  if (state.mixPaused) resumeMix();
+  else playMix();
+});
+document.getElementById('pauseMixBtn').addEventListener('click', pauseMix);
 document.getElementById('stopMixBtn').addEventListener('click', stopMix);
 
 // ════════════════════════════════════════════════════════════════════
