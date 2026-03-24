@@ -959,6 +959,7 @@ const state = {
   mixGains: [],
   mixPlaying: false,
   mixStartTime: 0,
+  analyserMix: null,
   mixDuration: 0,
   mixRAF: null,
   // Effects
@@ -1367,11 +1368,19 @@ function startVuMeter(deck, gainNode) {
   }
 
   function tick() {
-    const aPlaying = state.deckAPlaying;
-    const bPlaying = state.deckBPlaying;
+    const aPlaying   = state.deckAPlaying;
+    const bPlaying   = state.deckBPlaying;
+    const mixPlaying = state.mixPlaying;
 
     let levelA = aPlaying ? readLevel(state.analyserA) : 0;
     let levelB = bPlaying ? readLevel(state.analyserB) : 0;
+
+    // Mix playback: drive both VU bars from the mix analyser
+    if (mixPlaying && state.analyserMix) {
+      const mixLevel = readLevel(state.analyserMix);
+      levelA = Math.max(levelA, mixLevel);
+      levelB = Math.max(levelB, mixLevel);
+    }
 
     // When both decks are playing in sync: mirror both meters from the
     // louder signal so they visually rise and fall together on the beat
@@ -1390,6 +1399,13 @@ function startVuMeter(deck, gainNode) {
       const bl = 60 / (state.deckA.bpm || 120);
       const phase = (getDeckPos('A') % bl) / bl;
       if (phase < 0.05) { peakA = Math.min(100, peakA * 1.4); peakB = Math.min(100, peakB * 1.4); }
+    }
+    // Beat flash during mix playback
+    if (mixPlaying && state.mixPlan?.sequence?.length) {
+      const bpm = state.mixPlan.sequence[0].bpm || 120;
+      const bl  = 60 / bpm;
+      const elapsed = (state.audioCtx.currentTime - state.mixStartTime) % bl;
+      if (elapsed / bl < 0.05) { peakA = Math.min(100, peakA * 1.4); peakB = Math.min(100, peakB * 1.4); }
     }
 
     els.AL.style.height = peakA.toFixed(1) + '%';
@@ -1921,6 +1937,13 @@ async function playMix() {
   state.mixSources   = [];
   state.mixGains     = [];
 
+  // Shared analyser for VU meters during mix playback
+  const mixAnalyser = state.audioCtx.createAnalyser();
+  mixAnalyser.fftSize = 512;
+  mixAnalyser.smoothingTimeConstant = 0.75;
+  mixAnalyser.connect(state.audioCtx.destination);
+  state.analyserMix = mixAnalyser;
+
   // Build a map: track_id → crossfade_in duration from the previous transition
   const crossfadeIn = {};
   plan.transitions.forEach(tr => {
@@ -1932,10 +1955,7 @@ async function playMix() {
     if (!buf) return;
 
     const gain = state.audioCtx.createGain();
-    const analyser = state.audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    gain.connect(analyser);
-    analyser.connect(state.audioCtx.destination);
+    gain.connect(mixAnalyser);
 
     const src = state.audioCtx.createBufferSource();
     src.buffer = buf;
@@ -1995,6 +2015,7 @@ function stopMix() {
   state.mixSources = [];
   state.mixGains   = [];
   state.mixPlaying = false;
+  state.analyserMix = null;
   if (state.mixRAF) { cancelAnimationFrame(state.mixRAF); state.mixRAF = null; }
   document.getElementById('mixPlayhead').style.display = 'none';
   document.getElementById('playMixBtn').disabled = false;
@@ -2056,12 +2077,19 @@ async function playMixFrom(fromIndex) {
   state.mixSources     = [];
   state.mixGains       = [];
 
+  // Shared analyser for VU meters during mix playback
+  const mixAnalyser2 = state.audioCtx.createAnalyser();
+  mixAnalyser2.fftSize = 512;
+  mixAnalyser2.smoothingTimeConstant = 0.75;
+  mixAnalyser2.connect(state.audioCtx.destination);
+  state.analyserMix = mixAnalyser2;
+
   segs.forEach((seg, idx) => {
     const buf = buffers[seg.track_id];
     if (!buf) return;
     const isFirst = idx === 0;
     const gain = state.audioCtx.createGain();
-    gain.connect(state.audioCtx.destination);
+    gain.connect(mixAnalyser2);
     const src = state.audioCtx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = seg.playback_rate || 1.0;
