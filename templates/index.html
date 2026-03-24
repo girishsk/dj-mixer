@@ -1182,6 +1182,8 @@ async function fetchAndDecodeAudio(track_id) {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const buf = await resp.arrayBuffer();
+  // decodeAudioData needs a running context — resume briefly if paused
+  if (state.audioCtx?.state === 'suspended') await state.audioCtx.resume();
   return state.audioCtx.decodeAudioData(buf);
 }
 
