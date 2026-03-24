@@ -611,6 +611,44 @@ header{
   animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;
 }
 
+/* ── Saved Mixes ──────────────────────────────────────────────────────── */
+.saved-mixes-section{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.saved-mixes-header{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;letter-spacing:2px;font-weight:700;color:var(--neon2);
+  margin-bottom:8px;
+}
+.saved-mixes-count{
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:10px;padding:1px 8px;font-size:10px;color:var(--dim);
+}
+.saved-mixes-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.saved-mixes-list::-webkit-scrollbar{width:4px}
+.saved-mixes-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.mix-item{
+  display:flex;align-items:center;gap:8px;
+  background:#0a1628;border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 10px;
+  transition:border-color .2s;
+}
+.mix-item:hover{border-color:var(--neon2)}
+.mix-item-info{flex:1;min-width:0}
+.mix-item-name{
+  font-size:12px;font-weight:600;color:#ddeeff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;border-bottom:1px dashed transparent;
+  transition:border-color .2s;
+  outline:none;
+}
+.mix-item-name:focus{border-bottom-color:var(--neon2);color:#fff}
+.mix-item-meta{font-size:10px;color:var(--dim);margin-top:2px}
+.mix-item-badge{
+  font-size:9px;padding:1px 5px;border-radius:3px;
+  background:#0a1e2e;color:var(--neon2);border:1px solid rgba(0,200,255,.25);
+  margin-right:4px;
+}
+.mix-item-actions{display:flex;gap:4px;flex-shrink:0}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media(max-width:900px){
   .app-body{grid-template-columns:1fr}
@@ -805,6 +843,13 @@ header{
     <div class="panel-title">MIX SEQUENCER</div>
     <div class="seq-controls">
       <button class="btn btn-neon" id="seqGenerateBtn">⚡ GENERATE MIX</button>
+      <select id="variationSelect" style="background:#0d1526;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:var(--radius);font-size:12px;cursor:pointer">
+        <option value="0">BPM Flow</option>
+        <option value="1">Energy Build</option>
+        <option value="2">Energy Drop</option>
+        <option value="3">BPM Climb</option>
+        <option value="4">Random</option>
+      </select>
       <button class="btn btn-green" id="playMixBtn" disabled>▶ PLAY MIX</button>
       <button class="btn btn-red"   id="stopMixBtn" disabled>■ STOP</button>
       <button class="btn btn-blue"  id="exportMp3Btn" disabled>⬇ EXPORT MP3</button>
@@ -819,6 +864,17 @@ header{
       </div>
     </div>
     <div class="transition-cards" id="transitionCards"></div>
+
+    <!-- Saved Mixes -->
+    <div class="saved-mixes-section">
+      <div class="saved-mixes-header">
+        <span>SAVED MIXES</span>
+        <span class="saved-mixes-count" id="savedMixCount">0</span>
+      </div>
+      <div class="saved-mixes-list" id="savedMixesList">
+        <div style="color:var(--dim);font-size:11px;padding:8px">No saved mixes yet — generate one above.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Scratch Pad ──────────────────────────────────────────────────── -->
@@ -1444,13 +1500,15 @@ async function generateMix() {
     toast('Need at least 2 analyzed tracks to generate a mix', 'warn');
     return;
   }
-  toast('Generating mix sequence…', 'info', 4000);
+  const variation = parseInt(document.getElementById('variationSelect').value) || 0;
+  const varName   = document.getElementById('variationSelect').selectedOptions[0].text;
+  toast(`Generating ${varName} mix sequence…`, 'info', 4000);
   setStatus('GENERATING MIX…');
   try {
     const res = await fetch('/api/generate_mix', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ tracks: ready }),
+      body: JSON.stringify({ tracks: ready, variation }),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -1458,13 +1516,13 @@ async function generateMix() {
     renderTimeline(data);
     const durStr = fmtTime(data.total_duration);
     document.getElementById('seqInfo').textContent =
-      `${data.track_count} tracks · ${data.transitions.length} transitions · Total: ${durStr}`;
-    toast(`Mix generated! ${data.track_count} tracks, ${durStr} total`, 'success');
+      `${data.track_count} tracks · ${data.transitions.length} transitions · ${durStr} · ${data.variation_name}`;
+    toast(`Mix saved: "${data.name}"`, 'success');
     document.getElementById('playMixBtn').disabled = false;
     document.getElementById('exportMp3Btn').disabled = false;
     document.getElementById('exportBtn').disabled = false;
-    // Scroll sequencer into view without hiding the sticky decks
     document.getElementById('timelineWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+    loadSavedMixes();
   } catch(err) {
     toast('Mix generation failed: ' + err.message, 'error');
   }
@@ -1514,6 +1572,96 @@ document.getElementById('exportMp3Btn').addEventListener('click', async () => {
     btn.textContent = '⬇ EXPORT MP3';
   }
 });
+
+// ════════════════════════════════════════════════════════════════════
+//  SAVED MIXES
+// ════════════════════════════════════════════════════════════════════
+async function loadSavedMixes() {
+  try {
+    const res  = await fetch('/api/mixes');
+    const list = await res.json();
+    const el   = document.getElementById('savedMixesList');
+    document.getElementById('savedMixCount').textContent = list.length;
+    if (!list.length) {
+      el.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:8px">No saved mixes yet — generate one above.</div>';
+      return;
+    }
+    el.innerHTML = '';
+    list.forEach(mix => {
+      const date = new Date(mix.created_at).toLocaleString(undefined, {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      const dur  = fmtTime(mix.total_duration);
+      const item = document.createElement('div');
+      item.className = 'mix-item';
+      item.innerHTML = `
+        <div class="mix-item-info">
+          <div class="mix-item-name" contenteditable="true" data-id="${mix.id}" title="Click to rename">${mix.name}</div>
+          <div class="mix-item-meta">
+            <span class="mix-item-badge">${mix.variation_name}</span>
+            ${mix.track_count} tracks · ${dur} · ${date}
+          </div>
+        </div>
+        <div class="mix-item-actions">
+          <button class="btn btn-sm btn-green" title="Load this mix">▶ LOAD</button>
+          <button class="btn btn-sm" style="color:var(--red);border:1px solid rgba(255,45,85,.4);background:transparent" title="Delete">✕</button>
+        </div>`;
+
+      // Load button
+      item.querySelector('.btn-green').addEventListener('click', () => loadMix(mix.id));
+
+      // Delete button
+      item.querySelector('[title="Delete"]').addEventListener('click', async () => {
+        if (!confirm(`Delete "${mix.name}"?`)) return;
+        await fetch(`/api/mixes/${mix.id}`, {method:'DELETE'});
+        loadSavedMixes();
+      });
+
+      // Inline rename on blur
+      const nameEl = item.querySelector('.mix-item-name');
+      nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
+      nameEl.addEventListener('blur', async () => {
+        const newName = nameEl.textContent.trim();
+        if (!newName || newName === mix.name) return;
+        await fetch(`/api/mixes/${mix.id}`, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({name: newName}),
+        });
+        mix.name = newName;
+        toast('Mix renamed', 'success');
+      });
+
+      el.appendChild(item);
+    });
+  } catch(e) {
+    console.warn('loadSavedMixes failed:', e);
+  }
+}
+
+async function loadMix(mixId) {
+  try {
+    setStatus('LOADING MIX…');
+    const res  = await fetch(`/api/mixes/${mixId}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    state.mixPlan = data;
+    stopMix();
+    renderTimeline(data);
+    const durStr = fmtTime(data.total_duration);
+    document.getElementById('seqInfo').textContent =
+      `${data.track_count} tracks · ${data.transitions.length} transitions · ${durStr} · ${data.variation_name}`;
+    document.getElementById('playMixBtn').disabled = false;
+    document.getElementById('exportMp3Btn').disabled = false;
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('timelineWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+    toast(`Loaded: "${data.name}"`, 'success');
+  } catch(e) {
+    toast('Failed to load mix: ' + e.message, 'error');
+  }
+  setStatus('READY');
+}
+
+// Load saved mixes on startup
+loadSavedMixes();
 
 const TL_PX_PER_SEC = 6; // pixels per second in timeline
 

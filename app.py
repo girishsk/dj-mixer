@@ -1,9 +1,11 @@
 import os
 import json
 import math
+import random
 import hashlib
 import re
 import traceback
+from datetime import datetime
 import numpy as np
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
@@ -12,7 +14,17 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+MIXES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mixes')
 os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(MIXES_DIR, exist_ok=True)
+
+VARIATION_NAMES = {
+    0: 'BPM Flow',
+    1: 'Energy Build',
+    2: 'Energy Drop',
+    3: 'BPM Climb',
+    4: 'Random',
+}
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -335,18 +347,36 @@ def _sort_by_bpm(tracks: list) -> list:
     return ordered
 
 
+def _sort_variation(tracks: list, variation: int) -> list:
+    if variation == 0:  # BPM Flow — greedy nearest-neighbour from median BPM
+        return _sort_by_bpm(tracks)
+    elif variation == 1:  # Energy Build — slowest/quietest first, builds to hype
+        return sorted(tracks, key=lambda t: float(t.get('energy', 0.5)))
+    elif variation == 2:  # Energy Drop — high energy opener, chill landing
+        return sorted(tracks, key=lambda t: float(t.get('energy', 0.5)), reverse=True)
+    elif variation == 3:  # BPM Climb — ascending tempo throughout set
+        return sorted(tracks, key=lambda t: float(t.get('bpm', 120)))
+    else:               # Random — shuffle, anything goes
+        shuffled = list(tracks)
+        random.shuffle(shuffled)
+        return shuffled
+
+
 @app.route('/api/generate_mix', methods=['POST'])
 def generate_mix():
-    data   = request.get_json(force=True)
-    tracks = (data or {}).get('tracks', [])
+    data      = request.get_json(force=True)
+    tracks    = (data or {}).get('tracks', [])
+    variation = int((data or {}).get('variation', 0))
+    mix_name  = ((data or {}).get('name') or '').strip()
+
     if len(tracks) < 2:
         return jsonify({'error': 'Need at least 2 tracks'}), 400
 
     # Ensure all tracks have rich analysis fields
     tracks = [_ensure_rich_analysis(t) for t in tracks]
 
-    # Auto-order by BPM compatibility (greedy nearest-neighbour)
-    tracks = _sort_by_bpm(tracks)
+    # Order tracks based on chosen variation
+    tracks = _sort_variation(tracks, variation)
 
     sequence    = []
     transitions = []
@@ -416,12 +446,101 @@ def generate_mix():
         else:
             cursor = mix_end
 
-    return jsonify({
-        'sequence':       sequence,
-        'total_duration': round(cursor, 2),
-        'transitions':    transitions,
+    var_name = VARIATION_NAMES.get(variation, 'Custom')
+    if not mix_name:
+        mix_name = f"{var_name} · {datetime.now().strftime('%b %d %Y %H:%M')}"
+
+    mix_id  = f"mix_{int(datetime.now().timestamp())}"
+    mix_doc = {
+        'id':             mix_id,
+        'name':           mix_name,
+        'created_at':     datetime.now().isoformat(),
+        'variation':      variation,
+        'variation_name': var_name,
         'track_count':    len(sequence),
-    })
+        'total_duration': round(cursor, 2),
+        'sequence':       sequence,
+        'transitions':    transitions,
+        # self-contained track catalogue: includes YouTube URL so mix is playable elsewhere
+        'tracks': {
+            t['track_id']: {
+                'track_id':  t['track_id'],
+                'title':     t.get('title', ''),
+                'url':       t.get('url', ''),
+                'thumbnail': t.get('thumbnail', ''),
+                'bpm':       float(t.get('bpm', 120)),
+                'duration':  float(t.get('duration', 0)),
+                'key':       t.get('key', ''),
+                'energy':    float(t.get('energy', 0.5)),
+            } for t in tracks
+        },
+    }
+
+    mix_file = os.path.join(MIXES_DIR, f'{mix_id}.json')
+    with open(mix_file, 'w') as fh:
+        json.dump(mix_doc, fh, indent=2)
+
+    return jsonify(mix_doc)
+
+
+@app.route('/api/mixes', methods=['GET'])
+def list_mixes():
+    mixes = []
+    for fname in os.listdir(MIXES_DIR):
+        if not fname.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(MIXES_DIR, fname)) as fh:
+                doc = json.load(fh)
+            mixes.append({
+                'id':             doc.get('id'),
+                'name':           doc.get('name'),
+                'created_at':     doc.get('created_at'),
+                'variation':      doc.get('variation', 0),
+                'variation_name': doc.get('variation_name', ''),
+                'track_count':    doc.get('track_count', 0),
+                'total_duration': doc.get('total_duration', 0),
+            })
+        except Exception:
+            pass
+    mixes.sort(key=lambda m: m.get('created_at', ''), reverse=True)
+    return jsonify(mixes)
+
+
+@app.route('/api/mixes/<mix_id>', methods=['GET'])
+def get_mix(mix_id):
+    mix_id = re.sub(r'[^A-Za-z0-9_-]', '', mix_id)
+    path   = os.path.join(MIXES_DIR, f'{mix_id}.json')
+    if not os.path.exists(path):
+        return jsonify({'error': 'Mix not found'}), 404
+    with open(path) as fh:
+        return jsonify(json.load(fh))
+
+
+@app.route('/api/mixes/<mix_id>', methods=['PATCH'])
+def rename_mix(mix_id):
+    mix_id = re.sub(r'[^A-Za-z0-9_-]', '', mix_id)
+    path   = os.path.join(MIXES_DIR, f'{mix_id}.json')
+    if not os.path.exists(path):
+        return jsonify({'error': 'Mix not found'}), 404
+    name = ((request.get_json(force=True) or {}).get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Name required'}), 400
+    with open(path) as fh:
+        doc = json.load(fh)
+    doc['name'] = name
+    with open(path, 'w') as fh:
+        json.dump(doc, fh, indent=2)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/mixes/<mix_id>', methods=['DELETE'])
+def delete_mix(mix_id):
+    mix_id = re.sub(r'[^A-Za-z0-9_-]', '', mix_id)
+    path   = os.path.join(MIXES_DIR, f'{mix_id}.json')
+    if os.path.exists(path):
+        os.remove(path)
+    return jsonify({'ok': True})
 
 
 @app.route('/api/upload', methods=['POST'])

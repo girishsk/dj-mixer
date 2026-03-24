@@ -1,0 +1,284 @@
+{
+  "id": "mix_1774319858",
+  "name": "BPM Flow \u00b7 Mar 23 2026 19:37",
+  "created_at": "2026-03-23T19:37:38.004775",
+  "variation": 0,
+  "variation_name": "BPM Flow",
+  "track_count": 9,
+  "total_duration": 1025.98,
+  "sequence": [
+    {
+      "track_id": "ba2cOls3Bv0",
+      "title": "Full Video: Ra Ra Rakkamma Song | Vikrant Rona Kannada | Kichcha Sudeep | Jacqueline Fernandez|Anup",
+      "bpm": 129.2,
+      "start_time": 0.0,
+      "end_time": 157.71,
+      "audio_offset": 22.29,
+      "transition_out": 83.38,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.0
+    },
+    {
+      "track_id": "CPpIcRbd1jc",
+      "title": "Nammura Santheli Best College Song || Kannada Old Video Songs Full HD || Gaali Maathu",
+      "bpm": 129.2,
+      "start_time": 83.38,
+      "end_time": 235.02,
+      "audio_offset": 7.43,
+      "transition_out": 194.91,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.0
+    },
+    {
+      "track_id": "9bZkp7q19f0",
+      "title": "PSY - GANGNAM STYLE(\uac15\ub0a8\uc2a4\ud0c0\uc77c) M/V",
+      "bpm": 129.2,
+      "start_time": 194.91,
+      "end_time": 367.48,
+      "audio_offset": 7.43,
+      "transition_out": 340.13,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.0
+    },
+    {
+      "track_id": "YyepU5ztLf4",
+      "title": "Shararat | Dhurandhar | Ranveer, Aditya Dhar, Shashwat, Jasmine, Madhubanti, Ayesha, Krystle",
+      "bpm": 129.2,
+      "start_time": 340.13,
+      "end_time": 512.7,
+      "audio_offset": 7.43,
+      "transition_out": 422.56,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.08
+    },
+    {
+      "track_id": "hZezIuOTx6k",
+      "title": "Monica - Kannada Video Song| COOLIE| Superstar Rajinikanth| Sun Pictures| Lokesh|Anirudh|Pooja Hegde",
+      "bpm": 143.6,
+      "start_time": 422.56,
+      "end_time": 595.87,
+      "audio_offset": 6.69,
+      "transition_out": 549.64,
+      "crossfade_out": 8.0,
+      "playback_rate": 0.92
+    },
+    {
+      "track_id": "dmgGozZRbpI",
+      "title": "Dhurandhar The Revenge - Aari Aari Song | Dhurandhar 2 | Ranveer Singh | Rehman Dakait Song",
+      "bpm": 112.3,
+      "start_time": 549.64,
+      "end_time": 721.09,
+      "audio_offset": 8.55,
+      "transition_out": 652.05,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.0
+    },
+    {
+      "track_id": "dQw4w9WgXcQ",
+      "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+      "bpm": 112.3,
+      "start_time": 652.05,
+      "end_time": 823.5,
+      "audio_offset": 8.55,
+      "transition_out": 780.35,
+      "crossfade_out": 8.0,
+      "playback_rate": 0.92
+    },
+    {
+      "track_id": "P4UnrmPFPA4",
+      "title": "Naal Nachna (From \"Dhurandhar\")",
+      "bpm": 92.3,
+      "start_time": 780.35,
+      "end_time": 925.09,
+      "audio_offset": 10.4,
+      "transition_out": 860.47,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.08
+    },
+    {
+      "track_id": "VL4p2oYvgEU",
+      "title": "Malkit Singh - Guru Nalon Ishq Mitha (Music Video) Malaika Arora | Bally Sagoo | Jas Arora",
+      "bpm": 198.8,
+      "start_time": 860.47,
+      "end_time": 1025.98,
+      "audio_offset": 14.49,
+      "transition_out": 1017.98,
+      "crossfade_out": 8.0,
+      "playback_rate": 1.0
+    }
+  ],
+  "transitions": [
+    {
+      "from_track": "ba2cOls3Bv0",
+      "to_track": "CPpIcRbd1jc",
+      "start_at": 83.38,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 100.0,
+      "playback_rate_applied": 1.0,
+      "from_audio_pos": 105.67,
+      "to_audio_pos": 7.43
+    },
+    {
+      "from_track": "CPpIcRbd1jc",
+      "to_track": "9bZkp7q19f0",
+      "start_at": 194.91,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 100.0,
+      "playback_rate_applied": 1.0,
+      "from_audio_pos": 118.96,
+      "to_audio_pos": 7.43
+    },
+    {
+      "from_track": "9bZkp7q19f0",
+      "to_track": "YyepU5ztLf4",
+      "start_at": 340.13,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 100.0,
+      "playback_rate_applied": 1.0,
+      "from_audio_pos": 152.65,
+      "to_audio_pos": 7.43
+    },
+    {
+      "from_track": "YyepU5ztLf4",
+      "to_track": "hZezIuOTx6k",
+      "start_at": 422.56,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": -0.0,
+      "playback_rate_applied": 1.08,
+      "from_audio_pos": 89.86,
+      "to_audio_pos": 6.69
+    },
+    {
+      "from_track": "hZezIuOTx6k",
+      "to_track": "dmgGozZRbpI",
+      "start_at": 549.64,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 0.0,
+      "playback_rate_applied": 0.92,
+      "from_audio_pos": 133.77,
+      "to_audio_pos": 8.55
+    },
+    {
+      "from_track": "dmgGozZRbpI",
+      "to_track": "dQw4w9WgXcQ",
+      "start_at": 652.05,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 100.0,
+      "playback_rate_applied": 1.0,
+      "from_audio_pos": 110.96,
+      "to_audio_pos": 8.55
+    },
+    {
+      "from_track": "dQw4w9WgXcQ",
+      "to_track": "P4UnrmPFPA4",
+      "start_at": 780.35,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": 0.0,
+      "playback_rate_applied": 0.92,
+      "from_audio_pos": 136.85,
+      "to_audio_pos": 10.4
+    },
+    {
+      "from_track": "P4UnrmPFPA4",
+      "to_track": "VL4p2oYvgEU",
+      "start_at": 860.47,
+      "crossfade_duration": 8.0,
+      "bpm_match_quality": -0.0,
+      "playback_rate_applied": 1.08,
+      "from_audio_pos": 90.52,
+      "to_audio_pos": 14.49
+    }
+  ],
+  "tracks": {
+    "ba2cOls3Bv0": {
+      "track_id": "ba2cOls3Bv0",
+      "title": "Full Video: Ra Ra Rakkamma Song | Vikrant Rona Kannada | Kichcha Sudeep | Jacqueline Fernandez|Anup",
+      "url": "https://www.youtube.com/watch?v=ba2cOls3Bv0",
+      "thumbnail": "https://i.ytimg.com/vi/ba2cOls3Bv0/maxresdefault.jpg",
+      "bpm": 129.2,
+      "duration": 180.0,
+      "key": "A",
+      "energy": 1.0
+    },
+    "CPpIcRbd1jc": {
+      "track_id": "CPpIcRbd1jc",
+      "title": "Nammura Santheli Best College Song || Kannada Old Video Songs Full HD || Gaali Maathu",
+      "url": "https://www.youtube.com/watch?v=CPpIcRbd1jc",
+      "thumbnail": "https://i.ytimg.com/vi/CPpIcRbd1jc/maxresdefault.jpg",
+      "bpm": 129.2,
+      "duration": 159.07,
+      "key": "B",
+      "energy": 1.0
+    },
+    "9bZkp7q19f0": {
+      "track_id": "9bZkp7q19f0",
+      "title": "PSY - GANGNAM STYLE(\uac15\ub0a8\uc2a4\ud0c0\uc77c) M/V",
+      "url": "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      "thumbnail": "https://i.ytimg.com/vi/9bZkp7q19f0/maxresdefault.jpg",
+      "bpm": 129.2,
+      "duration": 180.0,
+      "key": "G",
+      "energy": 1.0
+    },
+    "YyepU5ztLf4": {
+      "track_id": "YyepU5ztLf4",
+      "title": "Shararat | Dhurandhar | Ranveer, Aditya Dhar, Shashwat, Jasmine, Madhubanti, Ayesha, Krystle",
+      "url": "https://www.youtube.com/watch?v=YyepU5ztLf4",
+      "thumbnail": "https://i.ytimg.com/vi/YyepU5ztLf4/maxresdefault.jpg",
+      "bpm": 129.2,
+      "duration": 180.0,
+      "key": "F#",
+      "energy": 1.0
+    },
+    "hZezIuOTx6k": {
+      "track_id": "hZezIuOTx6k",
+      "title": "Monica - Kannada Video Song| COOLIE| Superstar Rajinikanth| Sun Pictures| Lokesh|Anirudh|Pooja Hegde",
+      "url": "https://www.youtube.com/watch?v=hZezIuOTx6k",
+      "thumbnail": "https://i.ytimg.com/vi/hZezIuOTx6k/maxresdefault.jpg",
+      "bpm": 143.6,
+      "duration": 180.0,
+      "key": "E",
+      "energy": 1.0
+    },
+    "dmgGozZRbpI": {
+      "track_id": "dmgGozZRbpI",
+      "title": "Dhurandhar The Revenge - Aari Aari Song | Dhurandhar 2 | Ranveer Singh | Rehman Dakait Song",
+      "url": "https://www.youtube.com/watch?v=dmgGozZRbpI",
+      "thumbnail": "https://i.ytimg.com/vi/dmgGozZRbpI/maxresdefault.jpg",
+      "bpm": 112.3,
+      "duration": 180.0,
+      "key": "F#",
+      "energy": 1.0
+    },
+    "dQw4w9WgXcQ": {
+      "track_id": "dQw4w9WgXcQ",
+      "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+      "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+      "bpm": 112.3,
+      "duration": 180.0,
+      "key": "G#",
+      "energy": 1.0
+    },
+    "P4UnrmPFPA4": {
+      "track_id": "P4UnrmPFPA4",
+      "title": "Naal Nachna (From \"Dhurandhar\")",
+      "url": "https://www.youtube.com/watch?v=P4UnrmPFPA4",
+      "thumbnail": "https://i.ytimg.com/vi/P4UnrmPFPA4/maxresdefault.jpg",
+      "bpm": 92.3,
+      "duration": 155.14,
+      "key": "F#",
+      "energy": 1.0
+    },
+    "VL4p2oYvgEU": {
+      "track_id": "VL4p2oYvgEU",
+      "title": "Malkit Singh - Guru Nalon Ishq Mitha (Music Video) Malaika Arora | Bally Sagoo | Jas Arora",
+      "url": "https://www.youtube.com/watch?v=VL4p2oYvgEU",
+      "thumbnail": "https://i.ytimg.com/vi/VL4p2oYvgEU/maxresdefault.jpg",
+      "bpm": 198.8,
+      "duration": 180.0,
+      "key": "A#",
+      "energy": 1.0
+    }
+  }
+}
