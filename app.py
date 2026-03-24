@@ -656,6 +656,15 @@ def serve_audio(track_id):
                                mimetype='audio/mpeg')
 
 
+@app.route('/api/tracks/<track_id>', methods=['DELETE'])
+def delete_track(track_id):
+    track_id = re.sub(r'[^A-Za-z0-9_-]', '', track_id)
+    for path in [audio_path(track_id), meta_path(track_id)]:
+        if os.path.exists(path):
+            os.remove(path)
+    return jsonify({'ok': True})
+
+
 @app.route('/api/waveform/<track_id>')
 def serve_waveform(track_id):
     track_id = re.sub(r'[^A-Za-z0-9_-]', '', track_id)

@@ -1085,7 +1085,11 @@ function renderTrackList() {
       <div class="track-actions">
         <div class="btn-deck btn-deck-a" data-idx="${i}" data-deck="A">DECK A</div>
         <div class="btn-deck btn-deck-b" data-idx="${i}" data-deck="B">DECK B</div>
-      </div>` : ''}
+        <div class="btn-deck" style="border-color:rgba(255,45,85,.4);color:var(--red);flex:0;padding:4px 8px" data-delete="${i}" title="Remove track">✕</div>
+      </div>` : `
+      <div class="track-actions">
+        <div class="btn-deck" style="border-color:rgba(255,45,85,.4);color:var(--red);flex:0;padding:4px 8px" data-delete="${i}" title="Remove track">✕</div>
+      </div>`}
     `;
     list.appendChild(div);
   });
@@ -1116,6 +1120,24 @@ function renderTrackList() {
         state.tracks.splice(toIdx, 0, moved);
         renderTrackList();
       }
+    });
+  });
+
+  // Delete buttons
+  list.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const idx   = parseInt(btn.dataset.delete);
+      const track = state.tracks[idx];
+      if (!track) return;
+      if (!confirm(`Remove "${track.title || track.track_id}" from library?`)) return;
+      // Remove from server cache
+      await fetch(`/api/tracks/${track.track_id}`, {method: 'DELETE'}).catch(() => {});
+      // Remove from state and localStorage
+      state.tracks.splice(idx, 1);
+      saveTracks();
+      renderTrackList();
+      toast(`Removed "${track.title || 'track'}"`, 'info');
     });
   });
 }
