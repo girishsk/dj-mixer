@@ -1,0 +1,8 @@
+flask
+flask-cors
+yt-dlp
+librosa
+numpy
+soundfile
+scipy
+pydub

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# DJ Mixer cache (downloaded audio + analysis)
+cache/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

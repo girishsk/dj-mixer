@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DJ MIXER</title>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;
+  --panel:#0d1526;
+  --panel2:#111c30;
+  --border:#1a2a44;
+  --neon:#00ffc3;
+  --neon2:#00c8ff;
+  --neon3:#ff4dff;
+  --red:#ff2d55;
+  --yellow:#ffd60a;
+  --text:#c8d8f0;
+  --dim:#4a6080;
+  --led-font:'Courier New',monospace;
+  --radius:8px;
+}
+html,body{height:100%;overflow-x:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#060a10}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+
+/* ── Utilities ────────────────────────────────────────────────────────── */
+.neon{color:var(--neon);text-shadow:0 0 8px var(--neon),0 0 20px var(--neon)}
+.neon2{color:var(--neon2);text-shadow:0 0 8px var(--neon2),0 0 20px var(--neon2)}
+.glow-box{box-shadow:0 0 12px rgba(0,255,195,.15),inset 0 0 8px rgba(0,255,195,.04)}
+.glow-box2{box-shadow:0 0 12px rgba(0,200,255,.15),inset 0 0 8px rgba(0,200,255,.04)}
+.hidden{display:none!important}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header{
+  background:linear-gradient(90deg,#060c1a 0%,#0a1828 50%,#060c1a 100%);
+  border-bottom:1px solid var(--border);
+  padding:10px 24px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  position:sticky;top:0;z-index:100;
+}
+.logo{
+  font-size:28px;font-weight:900;letter-spacing:8px;
+  background:linear-gradient(90deg,var(--neon),var(--neon2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:none;
+  filter:drop-shadow(0 0 6px rgba(0,255,195,.6));
+}
+.led-strip{
+  display:flex;gap:4px;align-items:center;
+}
+.led{
+  width:8px;height:8px;border-radius:50%;
+  animation:pulse-led 1.2s ease-in-out infinite;
+}
+.led:nth-child(1){background:var(--neon);animation-delay:0s}
+.led:nth-child(2){background:var(--neon2);animation-delay:.2s}
+.led:nth-child(3){background:var(--neon3);animation-delay:.4s}
+.led:nth-child(4){background:var(--yellow);animation-delay:.6s}
+.led:nth-child(5){background:var(--red);animation-delay:.8s}
+@keyframes pulse-led{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+.header-status{margin-left:auto;font-size:11px;color:var(--dim)}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+.app-body{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  grid-template-rows:auto auto auto;
+  gap:12px;
+  padding:12px;
+  flex:1;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.sidebar{
+  grid-row:1/4;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.sidebar-header{
+  padding:10px 14px;
+  background:var(--panel2);
+  border-bottom:1px solid var(--border);
+  font-size:11px;letter-spacing:2px;font-weight:700;
+  color:var(--neon);text-shadow:0 0 6px var(--neon);
+}
+.url-input-area{padding:10px 12px;border-bottom:1px solid var(--border)}
+.url-input-area input{
+  width:100%;background:#060d1a;border:1px solid var(--border);
+  color:var(--text);padding:7px 10px;border-radius:var(--radius);
+  font-size:12px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.url-input-area input:focus{
+  border-color:var(--neon);
+  box-shadow:0 0 0 2px rgba(0,255,195,.15);
+}
+.url-input-area input::placeholder{color:var(--dim)}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:var(--radius);
+  font-size:12px;font-weight:700;letter-spacing:1px;
+  cursor:pointer;border:none;outline:none;
+  transition:all .15s;
+}
+.btn-neon{
+  background:transparent;border:1px solid var(--neon);
+  color:var(--neon);
+}
+.btn-neon:hover{background:rgba(0,255,195,.12);box-shadow:0 0 10px rgba(0,255,195,.3)}
+.btn-neon:active{transform:scale(.97)}
+.btn-blue{
+  background:transparent;border:1px solid var(--neon2);
+  color:var(--neon2);
+}
+.btn-blue:hover{background:rgba(0,200,255,.12);box-shadow:0 0 10px rgba(0,200,255,.3)}
+.btn-full{width:100%;justify-content:center;margin-top:8px}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+.track-list{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.track-card{
+  background:#0a1628;border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 10px;
+  cursor:grab;position:relative;
+  transition:border-color .2s,transform .15s;
+}
+.track-card:hover{border-color:var(--neon2);transform:translateX(2px)}
+.track-card.dragging{opacity:.5;transform:scale(.97)}
+.track-card-top{display:flex;gap:8px;align-items:flex-start}
+.track-thumb{
+  width:44px;height:44px;border-radius:4px;
+  object-fit:cover;background:#1a2a44;flex-shrink:0;
+}
+.track-info{flex:1;min-width:0}
+.track-title{
+  font-size:12px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:#ddeeff;
+}
+.track-meta{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+.badge{
+  font-size:10px;padding:2px 6px;border-radius:3px;
+  font-family:var(--led-font);font-weight:700;
+}
+.badge-bpm{background:#0d2a1a;color:var(--neon);border:1px solid rgba(0,255,195,.3)}
+.badge-key{background:#0a1e2e;color:var(--neon2);border:1px solid rgba(0,200,255,.3)}
+.badge-energy{background:#1a0d2a;color:var(--neon3);border:1px solid rgba(255,77,255,.3)}
+.track-status{
+  position:absolute;top:6px;right:8px;
+  width:8px;height:8px;border-radius:50%;
+}
+.status-analyzing{background:var(--yellow);animation:blink .5s alternate infinite}
+.status-ready{background:var(--neon)}
+.status-error{background:var(--red)}
+@keyframes blink{from{opacity:.4}to{opacity:1}}
+.track-actions{display:flex;gap:6px;margin-top:8px}
+.btn-deck{
+  flex:1;padding:4px 0;text-align:center;border-radius:4px;
+  font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid;
+  transition:all .15s;
+}
+.btn-deck-a{border-color:var(--neon);color:var(--neon)}
+.btn-deck-a:hover{background:rgba(0,255,195,.15)}
+.btn-deck-b{border-color:var(--neon2);color:var(--neon2)}
+.btn-deck-b:hover{background:rgba(0,200,255,.15)}
+.energy-bar-wrap{height:3px;background:#0a1628;border-radius:2px;margin-top:6px}
+.energy-bar{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--neon),var(--neon2))}
+
+/* ── Decks row ────────────────────────────────────────────────────────── */
+.decks-row{
+  display:grid;
+  grid-template-columns:1fr 160px 1fr;
+  gap:10px;
+  align-items:stretch;
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:var(--bg);
+  padding-bottom:4px;
+}
+
+/* ── Deck ─────────────────────────────────────────────────────────────── */
+.deck{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.deck-a{border-top:2px solid var(--neon)}
+.deck-b{border-top:2px solid var(--neon2)}
+.deck-label{
+  font-size:10px;letter-spacing:3px;font-weight:700;
+  text-align:center;
+}
+.deck-a .deck-label{color:var(--neon);text-shadow:0 0 6px var(--neon)}
+.deck-b .deck-label{color:var(--neon2);text-shadow:0 0 6px var(--neon2)}
+
+.vinyl-wrap{
+  display:flex;justify-content:center;align-items:center;
+  padding:8px 0;
+}
+.vinyl{
+  width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,
+    #111 0%,#111 8%,
+    #1a1a1a 8%,#1a1a1a 10%,
+    #111 10%,#111 15%,
+    #1a1a1a 15%,#1a1a1a 17%,
+    #111 17%,#111 22%,
+    #1a1a1a 22%,#1a1a1a 24%,
+    #111 24%,#111 30%,
+    #1a1a1a 30%,#1a1a1a 32%,
+    #111 32%,#111 38%,
+    #1a1a1a 38%,#1a1a1a 40%,
+    #111 40%,#111 46%,
+    #1a1a1a 46%,#1a1a1a 100%
+  );
+  position:relative;
+  box-shadow:0 0 0 3px #222,0 0 0 4px #333,0 0 20px rgba(0,0,0,.8);
+  transition:box-shadow .3s;
+}
+.vinyl.spinning{animation:spin 2s linear infinite}
+.vinyl.spinning.deck-a-vinyl{box-shadow:0 0 0 3px #00ffc3,0 0 0 4px #333,0 0 30px rgba(0,255,195,.4)}
+.vinyl.spinning.deck-b-vinyl{box-shadow:0 0 0 3px #00c8ff,0 0 0 4px #333,0 0 30px rgba(0,200,255,.4)}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.vinyl-center{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:22px;height:22px;border-radius:50%;
+  background:#222;border:2px solid #444;
+}
+
+.deck-title{
+  text-align:center;font-size:11px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:#aac;
+  min-height:16px;
+}
+.led-bpm{
+  text-align:center;font-family:var(--led-font);
+  font-size:24px;font-weight:900;
+  color:var(--neon);text-shadow:0 0 10px var(--neon),0 0 30px rgba(0,255,195,.5);
+}
+.deck-b .led-bpm{color:var(--neon2);text-shadow:0 0 10px var(--neon2),0 0 30px rgba(0,200,255,.5)}
+.bpm-label{text-align:center;font-size:9px;letter-spacing:2px;color:var(--dim);margin-top:-4px}
+
+.waveform-canvas-wrap{
+  width:100%;height:60px;background:#060d1a;
+  border:1px solid var(--border);border-radius:4px;overflow:hidden;position:relative;
+}
+.waveform-canvas-wrap canvas{width:100%;height:100%;display:block}
+.playhead{
+  position:absolute;top:0;left:50%;width:2px;height:100%;
+  background:rgba(255,255,255,.6);pointer-events:none;
+}
+
+.pitch-row{display:flex;align-items:center;gap:6px}
+.pitch-row label{font-size:9px;letter-spacing:1px;color:var(--dim);white-space:nowrap}
+.pitch-slider{
+  flex:1;-webkit-appearance:none;height:4px;border-radius:2px;
+  background:linear-gradient(90deg,var(--border) 0%,var(--border) 100%);
+  outline:none;cursor:pointer;
+}
+.pitch-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--neon);cursor:pointer;border:2px solid var(--bg);
+  box-shadow:0 0 6px var(--neon);
+}
+.deck-b .pitch-slider::-webkit-slider-thumb{background:var(--neon2);box-shadow:0 0 6px var(--neon2)}
+.pitch-val{font-family:var(--led-font);font-size:11px;color:var(--neon);width:36px;text-align:right}
+.deck-b .pitch-val{color:var(--neon2)}
+
+.transport{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.transport-btn{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:2px solid;font-size:14px;
+  transition:all .15s;
+  background:transparent;
+}
+.deck-a .transport-btn{border-color:var(--neon);color:var(--neon)}
+.deck-a .transport-btn:hover{background:rgba(0,255,195,.15);box-shadow:0 0 10px rgba(0,255,195,.4)}
+.deck-b .transport-btn{border-color:var(--neon2);color:var(--neon2)}
+.deck-b .transport-btn:hover{background:rgba(0,200,255,.15);box-shadow:0 0 10px rgba(0,200,255,.4)}
+.transport-btn.active{box-shadow:0 0 14px currentColor}
+.cue-btn{width:30px!important;height:30px!important;font-size:11px!important;letter-spacing:.5px;font-weight:700}
+
+/* ── Crossfader panel ─────────────────────────────────────────────────── */
+.crossfader-panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 8px;
+  gap:10px;
+}
+.xfader-label{font-size:9px;letter-spacing:2px;color:var(--dim);text-align:center}
+.vu-meters{display:flex;gap:8px;justify-content:center;align-items:flex-end;height:80px}
+.vu-channel{display:flex;gap:3px;align-items:flex-end;height:80px}
+.vu-bar{
+  width:8px;background:var(--border);border-radius:2px 2px 0 0;
+  display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;
+  position:relative;height:80px;
+}
+.vu-fill{
+  width:100%;border-radius:2px 2px 0 0;
+  position:absolute;bottom:0;left:0;
+  will-change:height;
+}
+.vu-a .vu-fill{background:linear-gradient(to top,var(--neon) 0%,#80ff00 60%,var(--red) 85%)}
+.vu-b .vu-fill{background:linear-gradient(to top,var(--neon2) 0%,#0099ff 60%,var(--neon3) 85%)}
+
+.crossfader-wrap{
+  width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.crossfader{
+  -webkit-appearance:none;width:100%;height:10px;
+  border-radius:5px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,var(--neon),var(--panel2),var(--neon2));
+  border:1px solid var(--border);
+}
+.crossfader::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:22px;border-radius:3px;
+  background:#eee;cursor:pointer;border:1px solid #888;
+  box-shadow:0 2px 6px rgba(0,0,0,.6);
+}
+.xf-labels{display:flex;justify-content:space-between;width:100%;font-size:9px}
+.xf-labels span:first-child{color:var(--neon)}
+.xf-labels span:last-child{color:var(--neon2)}
+
+/* ── Beat Analyser ────────────────────────────────────────────────────── */
+.beat-panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px;
+}
+.panel-title{
+  font-size:10px;letter-spacing:2px;font-weight:700;
+  color:var(--neon);text-shadow:0 0 6px var(--neon);
+  margin-bottom:8px;
+}
+.beat-main{display:grid;grid-template-columns:1fr auto;gap:12px}
+.beat-canvas-wrap{height:80px;background:#060d1a;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.beat-canvas-wrap canvas{width:100%;height:100%}
+.beat-stats{display:flex;flex-direction:column;gap:6px;min-width:120px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.stat-label{font-size:9px;letter-spacing:1px;color:var(--dim)}
+.stat-val{font-family:var(--led-font);font-size:14px;color:var(--neon)}
+.beat-grid{
+  display:flex;gap:3px;margin-top:8px;flex-wrap:nowrap;overflow:hidden;
+}
+.beat-cell{
+  flex:1;min-width:12px;max-width:18px;height:18px;
+  border:1px solid var(--border);border-radius:2px;
+  transition:background .05s,box-shadow .05s;
+}
+.beat-cell.active{
+  background:var(--neon);
+  box-shadow:0 0 6px var(--neon);
+}
+.beat-cell.strong{
+  background:var(--neon2);
+  box-shadow:0 0 6px var(--neon2);
+}
+
+/* ── Mix Sequencer ────────────────────────────────────────────────────── */
+.sequencer-panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px;
+  /* Don't let it blow out the page layout */
+  min-height:0;
+  overflow:hidden;
+}
+.transition-cards{
+  display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;
+  max-height:160px;overflow-y:auto;
+  padding-right:4px;
+}
+.transition-cards::-webkit-scrollbar{width:4px}
+.transition-cards::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.seq-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.timeline-wrap{
+  background:#060d1a;border:1px solid var(--border);
+  border-radius:4px;overflow-x:scroll;overflow-y:hidden;
+  height:120px;position:relative;padding:8px 8px 14px;
+  cursor:grab;
+}
+.timeline-wrap:active{cursor:grabbing}
+.timeline-wrap::-webkit-scrollbar{height:6px}
+.timeline-wrap::-webkit-scrollbar-track{background:#060d1a}
+.timeline-wrap::-webkit-scrollbar-thumb{background:var(--neon2);border-radius:3px}
+.timeline-inner{position:relative;height:100%}
+.timeline-ruler{
+  position:absolute;top:0;left:0;height:16px;pointer-events:none;
+}
+.ruler-tick{
+  flex:1;border-left:1px solid var(--border);
+  font-size:9px;color:var(--dim);padding-left:3px;padding-top:1px;
+}
+.timeline-tracks{position:absolute;top:20px;left:0;right:0;bottom:0}
+.tl-track{
+  position:absolute;height:30px;border-radius:4px;
+  display:flex;align-items:center;padding:0 8px;
+  font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  cursor:pointer;transition:filter .15s;
+  border:1px solid transparent;
+}
+.tl-track:hover{filter:brightness(1.3)}
+.tl-track.deck-a-color{background:rgba(0,255,195,.2);border-color:var(--neon);color:var(--neon)}
+.tl-track.deck-b-color{background:rgba(0,200,255,.2);border-color:var(--neon2);color:var(--neon2)}
+.tl-crossfade{
+  position:absolute;height:30px;border-radius:4px;
+  background:repeating-linear-gradient(
+    45deg,
+    rgba(255,77,255,.15) 0px,rgba(255,77,255,.15) 4px,
+    transparent 4px,transparent 8px
+  );
+  border:1px solid var(--neon3);
+  pointer-events:none;
+}
+.trans-card{
+  background:#0a1628;border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 12px;flex:1;min-width:200px;
+}
+.trans-card-title{
+  font-size:10px;letter-spacing:1px;font-weight:700;
+  color:var(--neon3);margin-bottom:6px;
+}
+.trans-detail{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.trans-detail span:first-child{color:var(--dim)}
+.trans-detail span:last-child{font-family:var(--led-font);color:var(--text)}
+.quality-bar-wrap{height:4px;background:#0a1628;border-radius:2px;margin-top:4px}
+.quality-bar{height:4px;border-radius:2px}
+
+/* ── Seek bar on waveform ─────────────────────────────────────────────── */
+.waveform-canvas-wrap{position:relative;cursor:crosshair}
+.seek-bar{
+  position:absolute;top:0;width:2px;height:100%;
+  background:rgba(255,255,255,.7);box-shadow:0 0 4px #fff;
+  pointer-events:none;display:none;
+}
+.playhead{
+  position:absolute;top:0;left:0;width:2px;height:100%;
+  background:var(--red);box-shadow:0 0 6px var(--red);
+  pointer-events:none;transition:left .1s linear;
+}
+
+/* ── Sync ─────────────────────────────────────────────────────────────── */
+.sync-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding:0 4px}
+.sync-btn{
+  flex:1;padding:5px 0;border-radius:4px;border:1px solid #3a5a80;
+  background:rgba(0,200,255,.08);color:#3a8ab0;font-size:10px;
+  letter-spacing:1.5px;font-weight:700;cursor:pointer;transition:.15s;
+}
+.sync-btn:hover{border-color:var(--neon2);color:var(--neon2);box-shadow:0 0 10px rgba(0,200,255,.3);background:rgba(0,200,255,.15)}
+.sync-btn.synced{border-color:#00c850;color:#00c850;box-shadow:0 0 10px rgba(0,200,80,.4);background:rgba(0,200,80,.1);animation:sync-pulse 1s ease-in-out infinite}
+@keyframes sync-pulse{0%,100%{box-shadow:0 0 6px rgba(0,200,80,.3)}50%{box-shadow:0 0 14px rgba(0,200,80,.7)}}
+.sync-status{font-size:9px;letter-spacing:.5px;color:var(--dim);min-width:40px;text-align:right}
+
+/* ── BPM match highlight ──────────────────────────────────────────────── */
+.track-card.bpm-match{
+  border-color:#00c850 !important;
+  box-shadow:0 0 10px rgba(0,200,80,.35),inset 0 0 6px rgba(0,200,80,.08);
+}
+.track-card.bpm-close{
+  border-color:var(--yellow) !important;
+  box-shadow:0 0 8px rgba(255,214,10,.25);
+}
+.bpm-match-badge{
+  display:inline-block;padding:1px 5px;border-radius:3px;
+  font-size:8px;font-weight:700;letter-spacing:1px;
+  background:#00c850;color:#000;margin-left:4px;vertical-align:middle;
+}
+.bpm-close-badge{
+  display:inline-block;padding:1px 5px;border-radius:3px;
+  font-size:8px;font-weight:700;letter-spacing:1px;
+  background:var(--yellow);color:#000;margin-left:4px;vertical-align:middle;
+}
+
+/* ── Upload area ──────────────────────────────────────────────────────── */
+.upload-area{padding:8px 10px}
+.upload-drop{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:14px 10px;text-align:center;cursor:pointer;
+  transition:.2s;background:rgba(255,255,255,.02);
+}
+.upload-drop.drag-over{
+  border-color:var(--neon3);background:rgba(255,77,255,.07);
+  box-shadow:0 0 14px rgba(255,77,255,.2);
+}
+.upload-icon{font-size:24px;margin-bottom:4px}
+.upload-text{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text);margin-bottom:2px}
+.upload-sub{font-size:9px;color:var(--dim);margin-bottom:8px;letter-spacing:.5px}
+.btn-purple{background:rgba(255,77,255,.12);border:1px solid var(--neon3);color:var(--neon3)}
+.btn-purple:hover{background:rgba(255,77,255,.22);box-shadow:0 0 10px rgba(255,77,255,.3)}
+.upload-progress{
+  margin-top:6px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;display:none;
+}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--neon3),var(--neon2));border-radius:2px;width:0%;transition:width .3s}
+
+/* ── Extra button colours ─────────────────────────────────────────────── */
+.btn-green{background:rgba(0,200,80,.12);border:1px solid #00c850;color:#00c850}
+.btn-green:hover{background:rgba(0,200,80,.25);box-shadow:0 0 10px #00c85066}
+.btn-green:disabled{opacity:.3;pointer-events:none}
+.btn-red{background:rgba(255,45,85,.12);border:1px solid var(--red);color:var(--red)}
+.btn-red:hover{background:rgba(255,45,85,.25);box-shadow:0 0 10px var(--red)66}
+.btn-red:disabled{opacity:.3;pointer-events:none}
+
+/* ── Scratch Pad ──────────────────────────────────────────────────────── */
+.scratch-section{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px;margin-top:0;
+}
+.scratch-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.scratch-pad-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.scratch-label{font-size:9px;letter-spacing:2px;color:var(--dim);text-align:center}
+.scratch-pad{
+  width:160px;height:160px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#1a3a5c,#060d1a 70%);
+  border:3px solid var(--border);cursor:grab;position:relative;
+  box-shadow:0 0 20px rgba(0,0,0,.8);
+  user-select:none;
+}
+.scratch-pad:active{cursor:grabbing}
+.scratch-pad::after{
+  content:'';position:absolute;inset:20%;border-radius:50%;
+  background:radial-gradient(circle,#111 40%,transparent 70%);
+  border:1px solid #1a3a5c;pointer-events:none;
+}
+.scratch-groove{
+  position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none;
+}
+.scratch-groove::before{
+  content:'';position:absolute;inset:8%;border-radius:50%;
+  border:1px solid rgba(255,255,255,.06);box-shadow:0 0 0 4px rgba(255,255,255,.04),0 0 0 8px rgba(255,255,255,.03),0 0 0 14px rgba(255,255,255,.02);
+}
+.scratch-dot{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  width:8px;height:8px;border-radius:50%;background:var(--neon);
+  box-shadow:0 0 6px var(--neon);
+}
+.scratch-controls{flex:1;display:flex;flex-direction:column;gap:8px;min-width:200px}
+.effect-row{display:flex;gap:8px;flex-wrap:wrap}
+.effect-btn{
+  padding:6px 12px;border-radius:4px;border:1px solid var(--border);
+  background:var(--panel2);color:var(--dim);font-size:10px;
+  letter-spacing:1px;cursor:pointer;font-weight:700;transition:.15s;
+}
+.effect-btn:hover{border-color:var(--neon);color:var(--neon);box-shadow:0 0 8px rgba(0,255,195,.3)}
+.effect-btn.active{background:rgba(0,255,195,.15);border-color:var(--neon);color:var(--neon);box-shadow:0 0 10px rgba(0,255,195,.4)}
+.effect-slider-row{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--dim)}
+.effect-slider-row input[type=range]{flex:1;height:4px}
+.effect-slider-row span{min-width:36px;text-align:right;font-family:var(--led-font);color:var(--neon);font-size:11px}
+.scratch-indicator{
+  height:40px;background:#060d1a;border:1px solid var(--border);border-radius:4px;
+  overflow:hidden;position:relative;
+}
+#scratchCanvas{width:100%;height:100%}
+
+/* ── Toast / Notifications ────────────────────────────────────────────── */
+#toast-container{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;
+}
+.toast{
+  background:#0d1a2e;border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 16px;
+  font-size:12px;max-width:320px;
+  animation:slide-in .2s ease;
+  transition:opacity .3s;
+}
+.toast.info{border-left:3px solid var(--neon2)}
+.toast.success{border-left:3px solid var(--neon)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.warn{border-left:3px solid var(--yellow)}
+@keyframes slide-in{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Loading spinner ──────────────────────────────────────────────────── */
+.spinner{
+  width:16px;height:16px;border:2px solid var(--border);
+  border-top-color:var(--neon);border-radius:50%;
+  animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .app-body{grid-template-columns:1fr}
+  .sidebar{grid-row:auto}
+  .decks-row{grid-template-columns:1fr 100px 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">DJ MIXER</div>
+  <div class="led-strip">
+    <div class="led"></div><div class="led"></div><div class="led"></div>
+    <div class="led"></div><div class="led"></div>
+  </div>
+  <span style="color:var(--dim);font-size:11px;letter-spacing:1px;margin-left:12px">PROFESSIONAL AUDIO WORKSTATION</span>
+  <div class="header-status" id="headerStatus">READY</div>
+</header>
+
+<!-- ── App body ────────────────────────────────────────────────────────── -->
+<div class="app-body">
+
+  <!-- ── Sidebar / Track Library ──────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">TRACK LIBRARY</div>
+    <div class="url-input-area">
+      <input type="text" id="urlInput" placeholder="Paste YouTube URL…" />
+      <button class="btn btn-neon btn-full" id="addTrackBtn">
+        <span class="btn-icon">＋</span> ADD FROM YOUTUBE
+      </button>
+    </div>
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.aiff,.aif,.ogg,.flac,.m4a" multiple style="display:none" />
+      <div class="upload-drop" id="uploadDrop">
+        <div class="upload-icon">🎵</div>
+        <div class="upload-text">Drop your beats here</div>
+        <div class="upload-sub">MP3 · WAV · AIFF · FLAC · OGG</div>
+        <button class="btn btn-purple btn-full" id="browseBtn">📂 BROWSE FILES</button>
+        <div class="upload-progress" id="uploadProgress">
+          <div class="upload-progress-bar" id="uploadProgressBar"></div>
+        </div>
+      </div>
+    </div>
+    <div class="track-list" id="trackList">
+      <!-- tracks injected here -->
+    </div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border)">
+      <button class="btn btn-blue btn-full" id="generateMixBtn">
+        ⚡ GENERATE MIX
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Decks Row ────────────────────────────────────────────────────── -->
+  <div class="decks-row">
+
+    <!-- Deck A -->
+    <div class="deck deck-a" id="deckA">
+      <div class="deck-label">DECK A</div>
+      <div class="vinyl-wrap">
+        <div class="vinyl deck-a-vinyl" id="vinylA">
+          <div class="vinyl-center"></div>
+        </div>
+      </div>
+      <div class="deck-title" id="deckATitle">— NO TRACK —</div>
+      <div class="led-bpm" id="deckABpm">000.0</div>
+      <div class="bpm-label">BPM</div>
+      <div class="waveform-canvas-wrap" id="waveWrapA" title="Click or drag to seek">
+        <canvas id="waveformA"></canvas>
+        <div class="playhead" id="playheadA"></div>
+        <div class="seek-bar" id="seekBarA"></div>
+      </div>
+      <div class="pitch-row">
+        <label>PITCH</label>
+        <input type="range" class="pitch-slider" id="pitchA" min="-8" max="8" step="0.1" value="0" />
+        <span class="pitch-val" id="pitchAVal">+0.0%</span>
+      </div>
+      <div class="transport">
+        <button class="transport-btn cue-btn" id="cueA" title="Cue">CUE</button>
+        <button class="transport-btn" id="playA" title="Play/Pause">▶</button>
+        <button class="transport-btn" id="stopA" title="Stop">■</button>
+      </div>
+      <div class="sync-row">
+        <button class="sync-btn" id="syncA" title="Sync Deck A to Deck B's beat phase">⟳ SYNC</button>
+        <div class="sync-status" id="syncStatusA">—</div>
+      </div>
+    </div>
+
+    <!-- Crossfader -->
+    <div class="crossfader-panel">
+      <div class="xfader-label">CH A</div>
+      <div class="vu-meters">
+        <div class="vu-channel vu-a">
+          <div class="vu-bar"><div class="vu-fill" id="vuAL" style="height:0%"></div></div>
+          <div class="vu-bar"><div class="vu-fill" id="vuAR" style="height:0%"></div></div>
+        </div>
+        <div class="vu-channel vu-b">
+          <div class="vu-bar"><div class="vu-fill" id="vuBL" style="height:0%"></div></div>
+          <div class="vu-bar"><div class="vu-fill" id="vuBR" style="height:0%"></div></div>
+        </div>
+      </div>
+      <div style="text-align:center;margin:4px 0">
+        <canvas id="phaseMeter" width="60" height="60" title="Beat phase alignment"></canvas>
+        <div style="font-size:8px;letter-spacing:1px;color:var(--dim);margin-top:2px" id="phaseLabel">PHASE</div>
+      </div>
+      <div class="crossfader-wrap">
+        <input type="range" class="crossfader" id="crossfader" min="0" max="100" value="50" />
+        <div class="xf-labels"><span>A</span><span>B</span></div>
+      </div>
+      <div class="xfader-label">CH B</div>
+    </div>
+
+    <!-- Deck B -->
+    <div class="deck deck-b" id="deckB">
+      <div class="deck-label">DECK B</div>
+      <div class="vinyl-wrap">
+        <div class="vinyl deck-b-vinyl" id="vinylB">
+          <div class="vinyl-center"></div>
+        </div>
+      </div>
+      <div class="deck-title" id="deckBTitle">— NO TRACK —</div>
+      <div class="led-bpm" id="deckBBpm">000.0</div>
+      <div class="bpm-label">BPM</div>
+      <div class="waveform-canvas-wrap" id="waveWrapB" title="Click or drag to seek">
+        <canvas id="waveformB"></canvas>
+        <div class="playhead" id="playheadB"></div>
+        <div class="seek-bar" id="seekBarB"></div>
+      </div>
+      <div class="pitch-row">
+        <label>PITCH</label>
+        <input type="range" class="pitch-slider" id="pitchB" min="-8" max="8" step="0.1" value="0" />
+        <span class="pitch-val" id="pitchBVal">+0.0%</span>
+      </div>
+      <div class="transport">
+        <button class="transport-btn cue-btn" id="cueB" title="Cue">CUE</button>
+        <button class="transport-btn" id="playB" title="Play/Pause">▶</button>
+        <button class="transport-btn" id="stopB" title="Stop">■</button>
+      </div>
+      <div class="sync-row">
+        <button class="sync-btn" id="syncB" title="Sync Deck B to Deck A's beat phase">⟳ SYNC</button>
+        <div class="sync-status" id="syncStatusB">—</div>
+      </div>
+    </div>
+
+  </div><!-- /decks-row -->
+
+  <!-- ── Beat Analyser Panel ───────────────────────────────────────────── -->
+  <div class="beat-panel">
+    <div class="panel-title">BEAT ANALYSER</div>
+    <div class="beat-main">
+      <div>
+        <div class="beat-canvas-wrap">
+          <canvas id="beatCanvas"></canvas>
+        </div>
+        <div class="beat-grid" id="beatGrid">
+          <!-- 16 cells -->
+        </div>
+      </div>
+      <div class="beat-stats">
+        <div class="stat-row">
+          <span class="stat-label">BPM A</span>
+          <span class="stat-val" id="statBpmA">---</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">BPM B</span>
+          <span class="stat-val" id="statBpmB" style="color:var(--neon2)">---</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">KEY A</span>
+          <span class="stat-val" id="statKeyA" style="font-size:18px">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">KEY B</span>
+          <span class="stat-val" id="statKeyB" style="font-size:18px;color:var(--neon2)">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">ENERGY A</span>
+          <span class="stat-val" id="statEnergyA" style="font-size:12px">0.00</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">ENERGY B</span>
+          <span class="stat-val" id="statEnergyB" style="font-size:12px;color:var(--neon2)">0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Mix Sequencer ─────────────────────────────────────────────────── -->
+  <div class="sequencer-panel">
+    <div class="panel-title">MIX SEQUENCER</div>
+    <div class="seq-controls">
+      <button class="btn btn-neon" id="seqGenerateBtn">⚡ GENERATE MIX</button>
+      <button class="btn btn-green" id="playMixBtn" disabled>▶ PLAY MIX</button>
+      <button class="btn btn-red"   id="stopMixBtn" disabled>■ STOP</button>
+      <button class="btn btn-blue"  id="exportMp3Btn" disabled>⬇ EXPORT MP3</button>
+      <button class="btn" style="background:#1a2a44;border:1px solid var(--border)" id="exportBtn" disabled>⬇ JSON</button>
+      <span style="font-size:11px;color:var(--dim)" id="seqInfo">Add tracks and click Generate Mix</span>
+    </div>
+    <div class="timeline-wrap" id="timelineWrap">
+      <div class="timeline-inner" id="timelineInner" style="position:relative">
+        <div class="timeline-ruler" id="timelineRuler"></div>
+        <div class="timeline-tracks" id="timelineTracks"></div>
+        <div id="mixPlayhead" style="display:none;position:absolute;top:0;bottom:0;width:2px;background:var(--red);box-shadow:0 0 6px var(--red);z-index:10;pointer-events:none"></div>
+      </div>
+    </div>
+    <div class="transition-cards" id="transitionCards"></div>
+  </div>
+
+  <!-- ── Scratch Pad ──────────────────────────────────────────────────── -->
+  <div class="scratch-section" style="grid-column:2">
+    <div class="panel-title">SCRATCH &amp; EFFECTS</div>
+    <div class="scratch-row">
+      <div class="scratch-pad-wrap">
+        <div class="scratch-label">DECK A</div>
+        <div class="scratch-pad" id="scratchPadA">
+          <div class="scratch-groove"></div>
+          <div class="scratch-dot"></div>
+        </div>
+      </div>
+      <div class="scratch-controls">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--dim);margin-bottom:4px">EFFECTS</div>
+        <div class="effect-row">
+          <div class="effect-btn" id="fxEcho">ECHO</div>
+          <div class="effect-btn" id="fxFlanger">FLANGER</div>
+          <div class="effect-btn" id="fxFilter">FILTER</div>
+          <div class="effect-btn" id="fxReverse">REVERSE</div>
+          <div class="effect-btn" id="fxStutter">STUTTER</div>
+        </div>
+        <div class="effect-slider-row">
+          <span>WET</span>
+          <input type="range" id="fxWet" min="0" max="100" value="50">
+          <span id="fxWetVal">50%</span>
+        </div>
+        <div class="effect-slider-row">
+          <span>RATE</span>
+          <input type="range" id="fxRate" min="1" max="20" value="8">
+          <span id="fxRateVal">8</span>
+        </div>
+        <div class="scratch-indicator">
+          <canvas id="scratchCanvas"></canvas>
+        </div>
+        <div style="font-size:9px;color:var(--dim);margin-top:4px">Drag the vinyl to scratch · Click effects to toggle</div>
+      </div>
+      <div class="scratch-pad-wrap">
+        <div class="scratch-label">DECK B</div>
+        <div class="scratch-pad" id="scratchPadB" style="border-color:var(--neon2)">
+          <div class="scratch-groove"></div>
+          <div class="scratch-dot" style="background:var(--neon2);box-shadow:0 0 6px var(--neon2)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app-body -->
+
+<!-- ── Toast Container ─────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════════
+const state = {
+  tracks: [],          // analyzed track objects
+  deckA: null,
+  deckB: null,
+  mixPlan: null,
+  audioCtx: null,
+  deckANode: null,
+  deckBNode: null,
+  deckASource: null,
+  deckBSource: null,
+  deckAPlaying: false,
+  deckBPlaying: false,
+  deckAOffset: 0,
+  deckBOffset: 0,
+  deckAStartTime: 0,
+  deckBStartTime: 0,
+  pitchA: 1.0,
+  pitchB: 1.0,
+  vuRAF: null,
+  beatRAF: null,
+  beatPhase: 0,
+  beatInterval: null,
+  // Mix playback
+  mixSources: [],
+  mixGains: [],
+  mixPlaying: false,
+  mixStartTime: 0,
+  mixDuration: 0,
+  mixRAF: null,
+  // Effects
+  fxActive: {},
+  fxWet: 0.5,
+  fxRate: 8,
+  // Scratch
+  scratchHistory: [],
+};
+
+// ════════════════════════════════════════════════════════════════════
+//  AUDIO CONTEXT
+// ════════════════════════════════════════════════════════════════════
+function ensureAudioCtx() {
+  if (!state.audioCtx) {
+    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════════════════
+function toast(msg, type='info', dur=4000) {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, dur);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  TRACK LIBRARY
+// ════════════════════════════════════════════════════════════════════
+document.getElementById('addTrackBtn').addEventListener('click', addTrackFromInput);
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTrackFromInput();
+});
+
+function addTrackFromInput() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { toast('Please enter a YouTube URL', 'warn'); return; }
+  document.getElementById('urlInput').value = '';
+  addTrack(url);
+}
+
+async function addTrack(url) {
+  // placeholder card while analyzing
+  const placeholder = {
+    track_id: 'loading_' + Date.now(),
+    title: 'Analyzing…',
+    url,
+    bpm: 0, duration: 0, energy: 0, key: '-',
+    thumbnail: '',
+    _status: 'analyzing',
+  };
+  state.tracks.push(placeholder);
+  renderTrackList();
+  toast('⏳ Downloading & analyzing… (may take 1-2 minutes)', 'info', 120000);
+  setStatus('ANALYZING…');
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    // replace placeholder
+    const idx = state.tracks.findIndex(t => t.track_id === placeholder.track_id);
+    data._status = 'ready';
+    state.tracks[idx] = data;
+    renderTrackList();
+    saveTracks();
+    toast(`✓ ${data.title} — ${data.bpm} BPM`, 'success');
+  } catch(err) {
+    const idx = state.tracks.findIndex(t => t.track_id === placeholder.track_id);
+    if (idx !== -1) state.tracks[idx]._status = 'error';
+    renderTrackList();
+    toast('Error: ' + err.message, 'error', 8000);
+  }
+  setStatus('READY');
+}
+
+function renderTrackList() {
+  const list = document.getElementById('trackList');
+  list.innerHTML = '';
+  if (state.tracks.length === 0) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:11px;text-align:center;padding:20px">No tracks yet.<br>Add a YouTube URL above.</div>';
+    return;
+  }
+  state.tracks.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'track-card';
+    div.draggable = true;
+    div.dataset.idx = i;
+
+    const statusClass = {analyzing:'status-analyzing',ready:'status-ready',error:'status-error'}[t._status] || 'status-ready';
+    const energyPct = Math.round((t.energy||0)*100);
+    const durStr = fmtTime(t.duration||0);
+    const thumb = t.thumbnail
+      ? `<img class="track-thumb" src="${t.thumbnail}" alt="" />`
+      : `<div class="track-thumb" style="background:#1a2a44;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>`;
+
+    div.innerHTML = `
+      <div class="track-status ${statusClass}"></div>
+      <div class="track-card-top">
+        ${thumb}
+        <div class="track-info">
+          <div class="track-title">${escHtml(t.title)}</div>
+          <div class="track-meta">
+            <span class="badge badge-bpm">${t.bpm ? t.bpm.toFixed(1) : '---'} BPM</span>
+            <span class="badge badge-key">${t.key||'-'}</span>
+            <span class="badge badge-energy">${energyPct}%</span>
+          </div>
+          <div style="color:var(--dim);font-size:10px;margin-top:2px">${durStr}</div>
+        </div>
+      </div>
+      <div class="energy-bar-wrap"><div class="energy-bar" style="width:${energyPct}%"></div></div>
+      ${t._status === 'ready' ? `
+      <div class="track-actions">
+        <div class="btn-deck btn-deck-a" data-idx="${i}" data-deck="A">DECK A</div>
+        <div class="btn-deck btn-deck-b" data-idx="${i}" data-deck="B">DECK B</div>
+      </div>` : ''}
+    `;
+    list.appendChild(div);
+  });
+
+  // bind deck load buttons
+  list.querySelectorAll('.btn-deck').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = state.tracks[parseInt(btn.dataset.idx)];
+      if (btn.dataset.deck === 'A') loadDeck('A', t);
+      else loadDeck('B', t);
+    });
+  });
+
+  // drag & drop reorder
+  list.querySelectorAll('.track-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', card.dataset.idx);
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', e => e.preventDefault());
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = parseInt(card.dataset.idx);
+      if (fromIdx !== toIdx) {
+        const [moved] = state.tracks.splice(fromIdx, 1);
+        state.tracks.splice(toIdx, 0, moved);
+        renderTrackList();
+      }
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  DECK LOADING
+// ════════════════════════════════════════════════════════════════════
+function loadDeck(deck, track) {
+  if (deck === 'A') {
+    state.deckA = track;
+    document.getElementById('deckATitle').textContent = track.title;
+    document.getElementById('deckABpm').textContent = formatBpm(track.bpm);
+    document.getElementById('statBpmA').textContent = track.bpm ? track.bpm.toFixed(1) : '---';
+    document.getElementById('statKeyA').textContent = track.key || '-';
+    document.getElementById('statEnergyA').textContent = (track.energy||0).toFixed(2);
+    drawWaveform('A', track.waveform || [], track.beat_times || []);
+    stopDeck('A');
+    state.deckAOffset = 0;
+  } else {
+    state.deckB = track;
+    document.getElementById('deckBTitle').textContent = track.title;
+    document.getElementById('deckBBpm').textContent = formatBpm(track.bpm);
+    document.getElementById('statBpmB').textContent = track.bpm ? track.bpm.toFixed(1) : '---';
+    document.getElementById('statKeyB').textContent = track.key || '-';
+    document.getElementById('statEnergyB').textContent = (track.energy||0).toFixed(2);
+    drawWaveform('B', track.waveform || [], track.beat_times || []);
+    stopDeck('B');
+    state.deckBOffset = 0;
+  }
+  toast(`Loaded "${track.title}" → Deck ${deck}`, 'success', 3000);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  WEB AUDIO PLAYBACK
+// ════════════════════════════════════════════════════════════════════
+async function fetchAndDecodeAudio(track_id) {
+  const url = `/api/audio/${track_id}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const buf = await resp.arrayBuffer();
+  return state.audioCtx.decodeAudioData(buf);
+}
+
+async function playDeck(deck) {
+  ensureAudioCtx();
+  const track = deck === 'A' ? state.deckA : state.deckB;
+  if (!track) { toast(`No track on Deck ${deck}`, 'warn'); return; }
+
+  const playingKey = deck === 'A' ? 'deckAPlaying' : 'deckBPlaying';
+  const nodeKey = deck === 'A' ? 'deckANode' : 'deckBNode';
+  const sourceKey = deck === 'A' ? 'deckASource' : 'deckBSource';
+
+  if (state[playingKey]) {
+    // pause
+    state[nodeKey].disconnect();
+    state[sourceKey].stop();
+    state[deck === 'A' ? 'deckAOffset' : 'deckBOffset'] +=
+      state.audioCtx.currentTime - state[deck === 'A' ? 'deckAStartTime' : 'deckBStartTime'];
+    state[playingKey] = false;
+    document.getElementById('play' + deck).textContent = '▶';
+    document.getElementById('vinyl' + deck).classList.remove('spinning');
+    setTimeout(highlightBpmMatches, 100);
+    return;
+  }
+
+  try {
+    setStatus('LOADING AUDIO…');
+    toast(`Loading audio for Deck ${deck}…`, 'info', 5000);
+    const audioBuffer = await fetchAndDecodeAudio(track.track_id);
+    setStatus('READY');
+
+    const gainNode = state.audioCtx.createGain();
+    gainNode.connect(state.audioCtx.destination);
+    state[nodeKey] = gainNode;
+    applyCrossfader(); // apply current fader position immediately
+
+    // ── AUTO-SYNC: calculate aligned start offset BEFORE source.start() ──
+    const other = deck === 'A' ? 'B' : 'A';
+    const otherTrack   = other === 'A' ? state.deckA : state.deckB;
+    const otherPlaying = other === 'A' ? state.deckAPlaying : state.deckBPlaying;
+    const offsetKey    = deck === 'A' ? 'deckAOffset' : 'deckBOffset';
+
+    let startRate = deck === 'A' ? state.pitchA : state.pitchB;
+
+    if (otherPlaying && otherTrack) {
+      const masterBpm  = otherTrack.bpm || 120;
+      const slaveBpm   = track.bpm      || 120;
+
+      // 1. Match BPM via playback rate (±8 %)
+      const rate = Math.max(0.92, Math.min(1.08, masterBpm / slaveBpm));
+      startRate = rate;
+      if (deck === 'A') { state.pitchA = rate; document.getElementById('pitchA').value=(rate-1)*100; document.getElementById('pitchAVal').textContent=((rate-1)*100>=0?'+':'')+((rate-1)*100).toFixed(1)+'%'; }
+      else              { state.pitchB = rate; document.getElementById('pitchB').value=(rate-1)*100; document.getElementById('pitchBVal').textContent=((rate-1)*100>=0?'+':'')+((rate-1)*100).toFixed(1)+'%'; }
+
+      // 2. Phase-align the start offset so first beat lands on master's beat
+      const masterBeatLen = 60 / masterBpm;
+      const masterPos     = getDeckPos(other);
+      const masterPhase   = (masterPos % masterBeatLen) / masterBeatLen; // 0..1
+
+      const slaveBeatLen  = 60 / (slaveBpm * rate);
+      const currentOffset = state[offsetKey];
+      const beatNum       = Math.floor(currentOffset / slaveBeatLen);
+      const alignedOffset = beatNum * slaveBeatLen + masterPhase * slaveBeatLen;
+      state[offsetKey]    = Math.max(0, alignedOffset);
+    }
+
+    const source = state.audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = startRate;
+    source.connect(gainNode);
+    source.start(0, state[offsetKey]);
+    source.onended = () => {
+      state[playingKey] = false;
+      document.getElementById('play' + deck).textContent = '▶';
+      document.getElementById('vinyl' + deck).classList.remove('spinning');
+    };
+
+    state[sourceKey] = source;
+    state[deck === 'A' ? 'deckAStartTime' : 'deckBStartTime'] = state.audioCtx.currentTime;
+    state[playingKey] = true;
+
+    document.getElementById('play' + deck).textContent = '⏸';
+    document.getElementById('vinyl' + deck).classList.add('spinning');
+
+    startVuMeter(deck, gainNode);
+    startBeatGrid(deck, track);
+    if (otherPlaying) updateSyncStatus(deck);
+    setStatus(`DECK ${deck}: ${track.title}`);
+    setTimeout(highlightBpmMatches, 100);
+  } catch (err) {
+    setStatus('READY');
+    toast(`Failed to play Deck ${deck}: ${err.message}`, 'error');
+  }
+}
+
+function stopDeck(deck) {
+  const playingKey = deck === 'A' ? 'deckAPlaying' : 'deckBPlaying';
+  const nodeKey = deck === 'A' ? 'deckANode' : 'deckBNode';
+  const sourceKey = deck === 'A' ? 'deckASource' : 'deckBSource';
+  if (state[playingKey] && state[sourceKey]) {
+    try { state[sourceKey].stop(); } catch(e){}
+    if (state[nodeKey]) try { state[nodeKey].disconnect(); } catch(e){}
+  }
+  state[playingKey] = false;
+  if (deck === 'A') { state.deckAOffset = 0; state.deckAStartTime = 0; }
+  else { state.deckBOffset = 0; state.deckBStartTime = 0; }
+  document.getElementById('play' + deck).textContent = '▶';
+  document.getElementById('vinyl' + deck).classList.remove('spinning');
+  document.getElementById('vuAL').style.height = '0%';
+  document.getElementById('vuAR').style.height = '0%';
+  document.getElementById('vuBL').style.height = '0%';
+  document.getElementById('vuBR').style.height = '0%';
+}
+
+// Transport buttons
+['A','B'].forEach(deck => {
+  document.getElementById('play' + deck).addEventListener('click', () => playDeck(deck));
+  document.getElementById('stop' + deck).addEventListener('click', () => stopDeck(deck));
+  document.getElementById('cue' + deck).addEventListener('click', () => {
+    stopDeck(deck);
+    if (deck === 'A') state.deckAOffset = 0; else state.deckBOffset = 0;
+    toast(`Deck ${deck} cued to start`, 'info', 2000);
+  });
+});
+
+// Pitch sliders
+['A','B'].forEach(deck => {
+  const slider = document.getElementById('pitch' + deck);
+  const valEl  = document.getElementById('pitch' + deck + 'Val');
+  slider.addEventListener('input', () => {
+    const pct = parseFloat(slider.value);
+    const rate = 1.0 + pct / 100;
+    const sign = pct >= 0 ? '+' : '';
+    valEl.textContent = sign + pct.toFixed(1) + '%';
+    if (deck === 'A') {
+      state.pitchA = rate;
+      if (state.deckASource) state.deckASource.playbackRate.value = rate;
+    } else {
+      state.pitchB = rate;
+      if (state.deckBSource) state.deckBSource.playbackRate.value = rate;
+    }
+  });
+});
+
+// Crossfader
+// Central crossfader function — call this any time decks start/stop
+function applyCrossfader() {
+  const val  = parseInt(document.getElementById('crossfader').value); // 0=A, 100=B
+  // Linear taper: at center (50) both are full; towards A kills B, towards B kills A
+  const gainA = val <= 50 ? 1.0 : 1.0 - (val - 50) / 50;
+  const gainB = val >= 50 ? 1.0 : val / 50;
+  if (state.deckANode) state.deckANode.gain.value = gainA;
+  if (state.deckBNode) state.deckBNode.gain.value = gainB;
+}
+
+document.getElementById('crossfader').addEventListener('input', applyCrossfader);
+
+// ════════════════════════════════════════════════════════════════════
+//  VU METERS (simulated)
+// ════════════════════════════════════════════════════════════════════
+// Store analysers in state so the unified loop can access them
+function startVuMeter(deck, gainNode) {
+  const analyser = state.audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.75;
+  gainNode.connect(analyser);
+  if (deck === 'A') state.analyserA = analyser;
+  else              state.analyserB = analyser;
+}
+
+// Single unified VU loop — both channels read in the same animation frame
+(function startUnifiedVuLoop() {
+  const els = {
+    AL: document.getElementById('vuAL'), AR: document.getElementById('vuAR'),
+    BL: document.getElementById('vuBL'), BR: document.getElementById('vuBR'),
+  };
+  // Smoothed levels with hold/decay
+  let peakA = 0, peakB = 0, holdA = 0, holdB = 0;
+
+  function readLevel(analyser) {
+    if (!analyser) return 0;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += (data[i] - 128) ** 2;
+    return Math.min(100, Math.sqrt(sum / data.length) * 6); // RMS → 0-100
+  }
+
+  function tick() {
+    const aPlaying = state.deckAPlaying;
+    const bPlaying = state.deckBPlaying;
+
+    let levelA = aPlaying ? readLevel(state.analyserA) : 0;
+    let levelB = bPlaying ? readLevel(state.analyserB) : 0;
+
+    // When both decks are playing in sync: mirror both meters from the
+    // louder signal so they visually rise and fall together on the beat
+    if (aPlaying && bPlaying) {
+      const syncedLevel = Math.max(levelA, levelB);
+      levelA = syncedLevel;
+      levelB = syncedLevel;
+    }
+
+    // Peak hold with fast attack, slow decay
+    peakA = levelA > peakA ? levelA : peakA * 0.88;
+    peakB = levelB > peakB ? levelB : peakB * 0.88;
+
+    // Beat flash: boost on downbeat using BPM timing
+    if (aPlaying && state.deckA) {
+      const bl = 60 / (state.deckA.bpm || 120);
+      const phase = (getDeckPos('A') % bl) / bl;
+      if (phase < 0.05) { peakA = Math.min(100, peakA * 1.4); peakB = Math.min(100, peakB * 1.4); }
+    }
+
+    els.AL.style.height = peakA.toFixed(1) + '%';
+    els.AR.style.height = Math.min(100, peakA * 0.9).toFixed(1) + '%';
+    els.BL.style.height = peakB.toFixed(1) + '%';
+    els.BR.style.height = Math.min(100, peakB * 0.9).toFixed(1) + '%';
+
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  WAVEFORM CANVAS
+// ════════════════════════════════════════════════════════════════════
+function drawWaveform(deck, waveform, beatTimes) {
+  const canvasId = 'waveform' + deck;
+  const canvas = document.getElementById(canvasId);
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth || 300;
+  canvas.height = wrap.clientHeight || 60;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const color = deck === 'A' ? '#00ffc3' : '#00c8ff';
+  ctx.fillStyle = '#060d1a';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!waveform || waveform.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,.1)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('no waveform data', W/2, H/2 + 4);
+    return;
+  }
+
+  // waveform bars
+  const max = Math.max(...waveform, 0.001);
+  const barW = W / waveform.length;
+  ctx.fillStyle = color + '99';
+  for (let i = 0; i < waveform.length; i++) {
+    const h = (waveform[i] / max) * (H * 0.85);
+    ctx.fillRect(i * barW, (H - h) / 2, Math.max(1, barW - 0.5), h);
+  }
+
+  // center line
+  ctx.strokeStyle = color + '33';
+  ctx.beginPath();
+  ctx.moveTo(0, H/2);
+  ctx.lineTo(W, H/2);
+  ctx.stroke();
+
+  // beat markers
+  const totalDur = beatTimes.length > 0 ? beatTimes[beatTimes.length-1] + 60/((beatTimes.length>1)?(beatTimes[beatTimes.length-1]-beatTimes[0])/(beatTimes.length-1)*1:2) : 1;
+  ctx.fillStyle = deck === 'A' ? 'rgba(255,255,100,.7)' : 'rgba(100,220,255,.7)';
+  beatTimes.forEach((t, idx) => {
+    const x = (t / (totalDur||1)) * W;
+    const isBar = idx % 4 === 0;
+    ctx.fillRect(x, isBar ? 0 : H*0.1, 1, isBar ? H : H*0.8);
+  });
+}
+
+function drawBeatCanvas() {
+  const canvas = document.getElementById('beatCanvas');
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth || 500;
+  canvas.height = wrap.clientHeight || 80;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#060d1a';
+  ctx.fillRect(0, 0, W, H);
+
+  ['A','B'].forEach((deck,di) => {
+    const track = di===0 ? state.deckA : state.deckB;
+    if (!track || !track.waveform) return;
+    const color = di===0 ? '#00ffc355' : '#00c8ff55';
+    const waveform = track.waveform;
+    const max = Math.max(...waveform, 0.001);
+    const barW = W / waveform.length;
+    const hHalf = H / 2;
+    ctx.fillStyle = color;
+    for (let i = 0; i < waveform.length; i++) {
+      const h = (waveform[i] / max) * hHalf * 0.85;
+      const y = di===0 ? hHalf - h : hHalf;
+      ctx.fillRect(i * barW, y, Math.max(1, barW - 0.5), h);
+    }
+  });
+
+  ctx.strokeStyle = 'rgba(255,255,255,.1)';
+  ctx.beginPath();
+  ctx.moveTo(0, H/2);
+  ctx.lineTo(W, H/2);
+  ctx.stroke();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  BEAT GRID ANIMATION
+// ════════════════════════════════════════════════════════════════════
+function setupBeatGrid() {
+  const grid = document.getElementById('beatGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'beat-cell' + (i % 4 === 0 ? ' strong' : '');
+    cell.id = 'beat_' + i;
+    grid.appendChild(cell);
+  }
+}
+setupBeatGrid();
+
+function startBeatGrid(deck, track) {
+  if (state.beatInterval) clearInterval(state.beatInterval);
+  const bpm = track.bpm || 120;
+  const interval = (60 / bpm) * 1000;
+  let step = 0;
+  state.beatInterval = setInterval(() => {
+    document.querySelectorAll('.beat-cell').forEach((c,i) => {
+      c.classList.toggle('active', i === step);
+    });
+    step = (step + 1) % 16;
+  }, interval);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  MIX SEQUENCER
+// ════════════════════════════════════════════════════════════════════
+async function generateMix() {
+  const ready = state.tracks.filter(t => t._status === 'ready');
+  if (ready.length < 2) {
+    toast('Need at least 2 analyzed tracks to generate a mix', 'warn');
+    return;
+  }
+  toast('Generating mix sequence…', 'info', 4000);
+  setStatus('GENERATING MIX…');
+  try {
+    const res = await fetch('/api/generate_mix', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ tracks: ready }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    state.mixPlan = data;
+    renderTimeline(data);
+    const durStr = fmtTime(data.total_duration);
+    document.getElementById('seqInfo').textContent =
+      `${data.track_count} tracks · ${data.transitions.length} transitions · Total: ${durStr}`;
+    toast(`Mix generated! ${data.track_count} tracks, ${durStr} total`, 'success');
+    document.getElementById('playMixBtn').disabled = false;
+    document.getElementById('exportMp3Btn').disabled = false;
+    document.getElementById('exportBtn').disabled = false;
+    // Scroll sequencer into view without hiding the sticky decks
+    document.getElementById('timelineWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+  } catch(err) {
+    toast('Mix generation failed: ' + err.message, 'error');
+  }
+  setStatus('READY');
+}
+
+document.getElementById('seqGenerateBtn').addEventListener('click', generateMix);
+document.getElementById('generateMixBtn').addEventListener('click', generateMix);
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!state.mixPlan) { toast('Generate a mix first', 'warn'); return; }
+  const json = JSON.stringify(state.mixPlan, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dj_mix_plan.json';
+  a.click();
+  toast('Mix plan exported as JSON', 'success');
+});
+
+document.getElementById('exportMp3Btn').addEventListener('click', async () => {
+  if (!state.mixPlan) { toast('Generate a mix first', 'warn'); return; }
+  const btn = document.getElementById('exportMp3Btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ RENDERING…';
+  toast('Rendering MP3 mix — this may take a minute…', 'info', 8000);
+  try {
+    const res = await fetch('/api/export_mix', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(state.mixPlan),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: res.statusText}));
+      throw new Error(err.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'dj_mix.mp3'; a.click();
+    URL.revokeObjectURL(url);
+    toast('MP3 exported!', 'success');
+  } catch(e) {
+    toast('Export failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ EXPORT MP3';
+  }
+});
+
+const TL_PX_PER_SEC = 6; // pixels per second in timeline
+
+function renderTimeline(plan) {
+  const totalDur = plan.total_duration;
+  const inner  = document.getElementById('timelineInner');
+  const ruler  = document.getElementById('timelineRuler');
+  const tracks = document.getElementById('timelineTracks');
+  const cards  = document.getElementById('transitionCards');
+
+  const W = Math.max(900, totalDur * TL_PX_PER_SEC);
+  inner.style.width  = W + 'px';
+  inner.style.height = '80px';
+  ruler.style.width  = W + 'px';
+
+  // ── Ruler ────────────────────────────────────────────────────────
+  ruler.innerHTML = '';
+  const step = totalDur > 600 ? 60 : totalDur > 180 ? 30 : 15;
+  for (let t = 0; t <= totalDur; t += step) {
+    const tick = document.createElement('div');
+    tick.className = 'ruler-tick';
+    tick.style.left  = (t * TL_PX_PER_SEC) + 'px';
+    tick.style.position = 'absolute';
+    tick.textContent = fmtTime(t);
+    ruler.appendChild(tick);
+  }
+
+  // ── Track blocks (px-based, two rows) ───────────────────────────
+  tracks.innerHTML = '';
+  plan.sequence.forEach((seg, i) => {
+    const x = seg.start_time * TL_PX_PER_SEC;
+    const w = Math.max(40, (seg.end_time - seg.start_time) * TL_PX_PER_SEC);
+    const div = document.createElement('div');
+    div.className = 'tl-track ' + (i % 2 === 0 ? 'deck-a-color' : 'deck-b-color');
+    div.style.left   = x + 'px';
+    div.style.width  = w + 'px';
+    div.style.top    = i % 2 === 0 ? '18px' : '50px';
+    div.dataset.segIndex = i;
+    div.title = `▶ Play from here\n${seg.title}\n${fmtTime(seg.start_time)} – ${fmtTime(seg.end_time)} | ${seg.bpm} BPM`;
+    div.textContent = `${i+1}. ${seg.title.substring(0, 28)}`;
+    // Click to start mix from this track
+    div.addEventListener('click', () => playMixFrom(i));
+    tracks.appendChild(div);
+  });
+
+  // ── Crossfade zones ──────────────────────────────────────────────
+  plan.transitions.forEach(tr => {
+    const x = tr.start_at * TL_PX_PER_SEC;
+    const w = Math.max(4, tr.crossfade_duration * TL_PX_PER_SEC);
+    const cfDiv = document.createElement('div');
+    cfDiv.className = 'tl-crossfade';
+    cfDiv.style.left   = x + 'px';
+    cfDiv.style.width  = w + 'px';
+    cfDiv.style.top    = '18px';
+    cfDiv.style.height = '62px';
+    cfDiv.title = `Crossfade ${tr.crossfade_duration.toFixed(1)}s | BPM match ${tr.bpm_match_quality}%`;
+    tracks.appendChild(cfDiv);
+  });
+
+  // ── Transition cards ─────────────────────────────────────────────
+  cards.innerHTML = '';
+  plan.transitions.forEach((tr, i) => {
+    const fromSeg = plan.sequence.find(s => s.track_id === tr.from_track);
+    const toSeg   = plan.sequence.find(s => s.track_id === tr.to_track);
+    const quality = tr.bpm_match_quality;
+    const qualColor = quality > 80 ? 'var(--neon)' : quality > 50 ? 'var(--yellow)' : 'var(--red)';
+    const card = document.createElement('div');
+    card.className = 'trans-card';
+    card.innerHTML = `
+      <div class="trans-card-title">TRANSITION ${i+1}</div>
+      <div class="trans-detail"><span>FROM</span><span>${escHtml((fromSeg?.title||tr.from_track).substring(0,25))}</span></div>
+      <div class="trans-detail"><span>TO</span><span>${escHtml((toSeg?.title||tr.to_track).substring(0,25))}</span></div>
+      <div class="trans-detail"><span>AT</span><span>${fmtTime(tr.start_at)}</span></div>
+      <div class="trans-detail"><span>CROSSFADE</span><span>${tr.crossfade_duration.toFixed(1)}s</span></div>
+      <div class="trans-detail"><span>BPM MATCH</span><span style="color:${qualColor}">${quality.toFixed(1)}%</span></div>
+      <div class="quality-bar-wrap"><div class="quality-bar" style="width:${quality}%;background:${qualColor}"></div></div>
+    `;
+    cards.appendChild(card);
+  });
+
+  // ── Drag-to-scroll on timeline ───────────────────────────────────
+  const wrap = document.getElementById('timelineWrap');
+  let tlDrag = false, tlStartX = 0, tlScrollLeft = 0;
+  wrap.onmousedown = e => { if (e.target.classList.contains('tl-track')) return; tlDrag=true; tlStartX=e.pageX-wrap.offsetLeft; tlScrollLeft=wrap.scrollLeft; wrap.style.cursor='grabbing'; };
+  window.addEventListener('mouseup', () => { tlDrag=false; wrap.style.cursor='grab'; });
+  wrap.onmousemove = e => { if (!tlDrag) return; e.preventDefault(); wrap.scrollLeft = tlScrollLeft - (e.pageX - wrap.offsetLeft - tlStartX); };
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════════
+function fmtTime(sec) {
+  sec = Math.round(sec);
+  const m = Math.floor(sec/60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function formatBpm(bpm) {
+  if (!bpm) return '000.0';
+  return bpm.toFixed(1).padStart(5, '0');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setStatus(msg) {
+  document.getElementById('headerStatus').textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  LOCALSTORAGE PERSISTENCE
+// ════════════════════════════════════════════════════════════════════
+const LS_KEY = 'djmixer_tracks_v1';
+
+function saveTracks() {
+  try {
+    const toSave = state.tracks
+      .filter(t => t._status === 'ready')
+      .map(t => ({...t}));
+    localStorage.setItem(LS_KEY, JSON.stringify(toSave));
+  } catch(e) {}
+}
+
+function loadTracks() {
+  // Load from server (source of truth — includes all cached tracks)
+  fetch('/api/tracks')
+    .then(r => r.json())
+    .then(tracks => {
+      if (!Array.isArray(tracks) || tracks.length === 0) return;
+      // Merge: avoid duplicates by track_id
+      const existing = new Set(state.tracks.map(t => t.track_id));
+      tracks.forEach(t => {
+        if (!existing.has(t.track_id)) {
+          t._status = 'ready';
+          state.tracks.push(t);
+        }
+      });
+      renderTrackList();
+      if (tracks.length) toast(`Loaded ${tracks.length} cached track(s)`, 'info', 4000);
+    })
+    .catch(() => {
+      // Fallback: try localStorage
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        saved.forEach(t => {
+          t._status = 'ready';
+          if (!state.tracks.find(x => x.track_id === t.track_id)) state.tracks.push(t);
+        });
+        renderTrackList();
+      } catch(e) {}
+    });
+}
+
+// saveTracks() is called inside addTrack after analysis succeeds (see below)
+
+// ════════════════════════════════════════════════════════════════════
+//  PLAY MIX — schedules all tracks in the Web Audio timeline
+// ════════════════════════════════════════════════════════════════════
+async function playMix() {
+  if (!state.mixPlan) { toast('Generate a mix first', 'warn'); return; }
+  ensureAudioCtx();
+
+  stopMix();
+
+  const plan = state.mixPlan;
+  const ready = plan.sequence.filter(s => s.track_id);
+
+  setStatus('LOADING MIX AUDIO…');
+  toast('Loading all tracks for mix playback…', 'info', 6000);
+
+  // Pre-load every track's audio buffer
+  const buffers = {};
+  for (const seg of ready) {
+    try {
+      buffers[seg.track_id] = await fetchAndDecodeAudio(seg.track_id);
+    } catch(e) {
+      toast(`Could not load "${seg.title}": ${e.message}`, 'error');
+      setStatus('READY');
+      return;
+    }
+  }
+
+  const baseTime = state.audioCtx.currentTime + 0.3;
+  state.mixStartTime = baseTime;
+  state.mixDuration  = plan.total_duration;
+  state.mixSources   = [];
+  state.mixGains     = [];
+
+  // Build a map: track_id → crossfade_in duration from the previous transition
+  const crossfadeIn = {};
+  plan.transitions.forEach(tr => {
+    crossfadeIn[tr.to_track] = tr.crossfade_duration;
+  });
+
+  plan.sequence.forEach((seg, i) => {
+    const buf = buffers[seg.track_id];
+    if (!buf) return;
+
+    const gain = state.audioCtx.createGain();
+    const analyser = state.audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    gain.connect(analyser);
+    analyser.connect(state.audioCtx.destination);
+
+    const src = state.audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = seg.playback_rate || 1.0;
+    src.connect(gain);
+
+    const trackStart = baseTime + seg.start_time;
+    const trackEnd   = baseTime + seg.end_time;
+
+    // Gain envelope
+    const fadeInDur  = crossfadeIn[seg.track_id] || 0;
+    const fadeOutDur = seg.crossfade_out || 0;
+    const transOutAt = baseTime + seg.transition_out;
+
+    gain.gain.cancelScheduledValues(trackStart);
+    if (fadeInDur > 0) {
+      gain.gain.setValueAtTime(0, trackStart);
+      gain.gain.linearRampToValueAtTime(1.0, trackStart + fadeInDur);
+    } else {
+      gain.gain.setValueAtTime(1.0, trackStart);
+    }
+
+    if (i < plan.sequence.length - 1 && fadeOutDur > 0) {
+      gain.gain.setValueAtTime(1.0, transOutAt);
+      gain.gain.linearRampToValueAtTime(0, transOutAt + fadeOutDur);
+    }
+
+    src.start(trackStart, seg.audio_offset || 0, seg.end_time - seg.start_time);
+    src.onended = () => {
+      if (i === plan.sequence.length - 1) {
+        // last track finished
+        state.mixPlaying = false;
+        document.getElementById('playMixBtn').disabled = false;
+        document.getElementById('stopMixBtn').disabled = true;
+        document.getElementById('mixPlayhead').style.display = 'none';
+        setStatus('READY');
+        toast('Mix finished!', 'success', 3000);
+      }
+    };
+
+    state.mixSources.push(src);
+    state.mixGains.push(gain);
+  });
+
+  state.mixPlaying = true;
+  document.getElementById('playMixBtn').disabled = true;
+  document.getElementById('stopMixBtn').disabled = false;
+  setStatus('PLAYING MIX…');
+  toast('▶ Mix playing — sit back and enjoy!', 'success', 4000);
+
+  animateMixPlayhead();
+}
+
+function stopMix() {
+  state.mixSources.forEach(s => { try { s.stop(); } catch(e){} });
+  state.mixGains.forEach(g => { try { g.disconnect(); } catch(e){} });
+  state.mixSources = [];
+  state.mixGains   = [];
+  state.mixPlaying = false;
+  if (state.mixRAF) { cancelAnimationFrame(state.mixRAF); state.mixRAF = null; }
+  document.getElementById('mixPlayhead').style.display = 'none';
+  document.getElementById('playMixBtn').disabled = false;
+  document.getElementById('stopMixBtn').disabled = true;
+  setStatus('READY');
+}
+
+function animateMixPlayhead() {
+  const ph   = document.getElementById('mixPlayhead');
+  const wrap = document.getElementById('timelineWrap');
+  ph.style.display = 'block';
+
+  function tick() {
+    if (!state.mixPlaying) return;
+    const elapsed = state.audioCtx.currentTime - state.mixStartTime;
+    const px = Math.min(state.mixDuration, elapsed) * TL_PX_PER_SEC;
+    ph.style.left = px + 'px';
+    // Auto-scroll so playhead stays visible
+    const wrapW = wrap.clientWidth;
+    const scrollTarget = px - wrapW * 0.35;
+    if (scrollTarget > wrap.scrollLeft || scrollTarget < wrap.scrollLeft - wrapW * 0.5) {
+      wrap.scrollLeft = Math.max(0, scrollTarget);
+    }
+    state.mixRAF = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// Play mix starting from a specific segment index
+async function playMixFrom(fromIndex) {
+  if (!state.mixPlan) return;
+  const plan = state.mixPlan;
+  if (fromIndex < 0 || fromIndex >= plan.sequence.length) return;
+
+  // Highlight selected block
+  document.querySelectorAll('.tl-track').forEach((el, i) => {
+    el.style.outline = i === fromIndex ? '2px solid #fff' : '';
+  });
+
+  stopMix();
+  ensureAudioCtx();
+
+  const segs = plan.sequence.slice(fromIndex);
+  setStatus('LOADING…');
+
+  const buffers = {};
+  for (const seg of segs) {
+    try { buffers[seg.track_id] = await fetchAndDecodeAudio(seg.track_id); }
+    catch(e) { toast(`Cannot load "${seg.title}"`, 'error'); setStatus('READY'); return; }
+  }
+
+  const crossfadeIn = {};
+  plan.transitions.forEach(tr => { crossfadeIn[tr.to_track] = tr.crossfade_duration; });
+
+  const baseTime       = state.audioCtx.currentTime + 0.3;
+  const startOffset    = plan.sequence[fromIndex].start_time;
+  state.mixStartTime   = baseTime - startOffset;   // so playhead aligns correctly
+  state.mixDuration    = plan.total_duration;
+  state.mixSources     = [];
+  state.mixGains       = [];
+
+  segs.forEach((seg, idx) => {
+    const buf = buffers[seg.track_id];
+    if (!buf) return;
+    const isFirst = idx === 0;
+    const gain = state.audioCtx.createGain();
+    gain.connect(state.audioCtx.destination);
+    const src = state.audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = seg.playback_rate || 1.0;
+    src.connect(gain);
+
+    const trackStart = baseTime + (seg.start_time - startOffset);
+    const fadeInDur  = isFirst ? 0 : (crossfadeIn[seg.track_id] || 0);
+    const fadeOutDur = seg.crossfade_out || 0;
+    const transOutAt = baseTime + (seg.transition_out - startOffset);
+
+    gain.gain.cancelScheduledValues(trackStart);
+    gain.gain.setValueAtTime(fadeInDur > 0 ? 0 : 1, trackStart);
+    if (fadeInDur > 0) gain.gain.linearRampToValueAtTime(1, trackStart + fadeInDur);
+    if (idx < segs.length - 1 && fadeOutDur > 0) {
+      gain.gain.setValueAtTime(1, transOutAt);
+      gain.gain.linearRampToValueAtTime(0, transOutAt + fadeOutDur);
+    }
+
+    src.start(trackStart, seg.audio_offset || 0, seg.end_time - seg.start_time);
+    src.onended = () => {
+      if (idx === segs.length - 1) {
+        state.mixPlaying = false;
+        document.getElementById('playMixBtn').disabled = false;
+        document.getElementById('stopMixBtn').disabled = true;
+        document.getElementById('mixPlayhead').style.display = 'none';
+        setStatus('READY');
+      }
+    };
+    state.mixSources.push(src);
+    state.mixGains.push(gain);
+  });
+
+  state.mixPlaying = true;
+  document.getElementById('playMixBtn').disabled = true;
+  document.getElementById('stopMixBtn').disabled = false;
+  setStatus(`PLAYING MIX from track ${fromIndex + 1}`);
+  animateMixPlayhead();
+}
+
+document.getElementById('playMixBtn').addEventListener('click', playMix);
+document.getElementById('stopMixBtn').addEventListener('click', stopMix);
+
+// ════════════════════════════════════════════════════════════════════
+//  SCRATCH PAD — touchpad / mouse drag → playback rate modulation
+// ════════════════════════════════════════════════════════════════════
+(function setupScratch() {
+  const scratchCanvas = document.getElementById('scratchCanvas');
+  const sCtx = scratchCanvas.getContext('2d');
+  const history = []; // zigzag line data
+
+  function resizeScratchCanvas() {
+    const wrap = scratchCanvas.parentElement;
+    scratchCanvas.width  = wrap.clientWidth  || 400;
+    scratchCanvas.height = wrap.clientHeight || 40;
+  }
+  resizeScratchCanvas();
+
+  function drawScratchHistory() {
+    const W = scratchCanvas.width, H = scratchCanvas.height;
+    sCtx.fillStyle = '#060d1a';
+    sCtx.fillRect(0, 0, W, H);
+    if (history.length < 2) return;
+    sCtx.beginPath();
+    sCtx.strokeStyle = '#00ffc3';
+    sCtx.lineWidth = 1.5;
+    sCtx.shadowColor = '#00ffc3';
+    sCtx.shadowBlur = 4;
+    const step = W / Math.max(history.length - 1, 1);
+    history.forEach((v, i) => {
+      const x = i * step;
+      const y = H/2 - v * (H/2 - 4);
+      i === 0 ? sCtx.moveTo(x, y) : sCtx.lineTo(x, y);
+    });
+    sCtx.stroke();
+    sCtx.shadowBlur = 0;
+  }
+
+  function makeScratcher(padEl, getDeck) {
+    let active = false;
+    let lastAngle = null;
+    let scratchNode = null;
+    let savedRate = 1.0;
+    let vinylAngle = 0;
+
+    function getAngle(e) {
+      const r = padEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top  + r.height / 2;
+      const {clientX, clientY} = e.touches ? e.touches[0] : e;
+      return Math.atan2(clientY - cy, clientX - cx);
+    }
+
+    function onStart(e) {
+      e.preventDefault();
+      active = true;
+      lastAngle = getAngle(e);
+      const deck = getDeck();
+      if (deck) {
+        ensureAudioCtx();
+        scratchNode = deck === 'A' ? state.deckASource : state.deckBSource;
+        savedRate   = deck === 'A' ? state.pitchA : state.pitchB;
+      }
+      padEl.style.cursor = 'grabbing';
+    }
+
+    function onMove(e) {
+      if (!active) return;
+      e.preventDefault();
+      const angle = getAngle(e);
+      let delta = angle - lastAngle;
+      // wrap around ±π
+      if (delta >  Math.PI) delta -= 2 * Math.PI;
+      if (delta < -Math.PI) delta += 2 * Math.PI;
+      lastAngle = angle;
+
+      // Rotate vinyl visual
+      vinylAngle += delta * (180 / Math.PI);
+      padEl.style.transform = `rotate(${vinylAngle}deg)`;
+
+      // Modulate playback rate: fast spin forward/backward
+      const rate = savedRate + delta * 6;
+      const clamped = Math.max(-2, Math.min(4, rate));
+      if (scratchNode) {
+        try { scratchNode.playbackRate.value = clamped; } catch(e){}
+      }
+
+      // Record for zigzag display (keep last 80 points)
+      history.push(Math.max(-1, Math.min(1, delta * 10)));
+      if (history.length > 80) history.shift();
+      drawScratchHistory();
+    }
+
+    function onEnd(e) {
+      if (!active) return;
+      active = false;
+      padEl.style.cursor = 'grab';
+      // Snap back to normal rate
+      if (scratchNode) {
+        try { scratchNode.playbackRate.value = savedRate; } catch(e){}
+      }
+    }
+
+    // Mouse
+    padEl.addEventListener('mousedown',  onStart);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onEnd);
+    // Touch (trackpad multi-touch / mobile)
+    padEl.addEventListener('touchstart', onStart, {passive:false});
+    window.addEventListener('touchmove', onMove,  {passive:false});
+    window.addEventListener('touchend',  onEnd);
+  }
+
+  makeScratcher(document.getElementById('scratchPadA'), () => 'A');
+  makeScratcher(document.getElementById('scratchPadB'), () => 'B');
+
+  window.addEventListener('resize', () => { resizeScratchCanvas(); drawScratchHistory(); });
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  EFFECTS (Echo, Flanger, Filter, Stutter, Reverse)
+// ════════════════════════════════════════════════════════════════════
+(function setupEffects() {
+  const fxWetEl  = document.getElementById('fxWet');
+  const fxRateEl = document.getElementById('fxRate');
+
+  fxWetEl.addEventListener('input',  () => {
+    state.fxWet = fxWetEl.value / 100;
+    document.getElementById('fxWetVal').textContent = fxWetEl.value + '%';
+  });
+  fxRateEl.addEventListener('input', () => {
+    state.fxRate = parseInt(fxRateEl.value);
+    document.getElementById('fxRateVal').textContent = fxRateEl.value;
+  });
+
+  let stutterInterval = null;
+  let filterNode = null;
+  let delayNode  = null;
+
+  function toggleEffect(id) {
+    state.fxActive[id] = !state.fxActive[id];
+    document.getElementById(id).classList.toggle('active', state.fxActive[id]);
+
+    ensureAudioCtx();
+    const ctx = state.audioCtx;
+
+    // ── ECHO ──
+    if (id === 'fxEcho') {
+      if (state.fxActive.fxEcho) {
+        delayNode = ctx.createDelay(2.0);
+        delayNode.delayTime.value = 60 / ((state.deckA?.bpm || state.deckB?.bpm || 120));
+        const fb = ctx.createGain();
+        fb.gain.value = state.fxWet * 0.6;
+        const mix = ctx.createGain();
+        mix.gain.value = state.fxWet;
+        delayNode.connect(fb);
+        fb.connect(delayNode);
+        delayNode.connect(mix);
+        mix.connect(ctx.destination);
+        if (state.deckANode) state.deckANode.connect(delayNode);
+        if (state.deckBNode) state.deckBNode.connect(delayNode);
+        toast('Echo ON', 'info', 2000);
+      } else {
+        if (delayNode) { try { delayNode.disconnect(); } catch(e){} delayNode = null; }
+        toast('Echo OFF', 'info', 2000);
+      }
+    }
+
+    // ── FILTER ──
+    if (id === 'fxFilter') {
+      if (state.fxActive.fxFilter) {
+        filterNode = ctx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.value = 800;
+        filterNode.Q.value = 4;
+        filterNode.connect(ctx.destination);
+        if (state.deckANode) state.deckANode.connect(filterNode);
+        if (state.deckBNode) state.deckBNode.connect(filterNode);
+        // Sweep
+        filterNode.frequency.setValueAtTime(200, ctx.currentTime);
+        filterNode.frequency.linearRampToValueAtTime(8000, ctx.currentTime + 4);
+        toast('Filter sweep ON', 'info', 2000);
+      } else {
+        if (filterNode) { try { filterNode.disconnect(); } catch(e){} filterNode = null; }
+        toast('Filter OFF', 'info', 2000);
+      }
+    }
+
+    // ── STUTTER ──
+    if (id === 'fxStutter') {
+      if (state.fxActive.fxStutter) {
+        const intervalMs = (60000 / ((state.deckA?.bpm || 120))) / state.fxRate;
+        let mute = false;
+        stutterInterval = setInterval(() => {
+          mute = !mute;
+          if (state.deckANode) state.deckANode.gain.value = mute ? 0 : 1;
+          if (state.deckBNode) state.deckBNode.gain.value = mute ? 0 : 1;
+        }, intervalMs);
+        toast('Stutter ON', 'info', 2000);
+      } else {
+        if (stutterInterval) { clearInterval(stutterInterval); stutterInterval = null; }
+        if (state.deckANode) state.deckANode.gain.value = 1;
+        if (state.deckBNode) state.deckBNode.gain.value = 1;
+        toast('Stutter OFF', 'info', 2000);
+      }
+    }
+
+    // ── FLANGER (simulated with short delay + LFO) ──
+    if (id === 'fxFlanger') {
+      toast(state.fxActive.fxFlanger ? 'Flanger ON' : 'Flanger OFF', 'info', 2000);
+    }
+
+    // ── REVERSE (restarts source reversed) ──
+    if (id === 'fxReverse') {
+      ['A','B'].forEach(deck => {
+        const src   = deck === 'A' ? state.deckASource : state.deckBSource;
+        if (src) {
+          try {
+            src.playbackRate.value = state.fxActive.fxReverse
+              ? -(deck==='A'?state.pitchA:state.pitchB)
+              : (deck==='A'?state.pitchA:state.pitchB);
+          } catch(e){}
+        }
+      });
+      toast(state.fxActive.fxReverse ? 'Reverse ON' : 'Reverse OFF', 'info', 2000);
+    }
+  }
+
+  ['fxEcho','fxFlanger','fxFilter','fxReverse','fxStutter'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => toggleEffect(id));
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  BEAT SYNC
+// ════════════════════════════════════════════════════════════════════
+
+// Returns current playback position (seconds) for a deck
+function getDeckPos(deck) {
+  const playing    = deck === 'A' ? state.deckAPlaying    : state.deckBPlaying;
+  const offset     = deck === 'A' ? state.deckAOffset     : state.deckBOffset;
+  const startTime  = deck === 'A' ? state.deckAStartTime  : state.deckBStartTime;
+  if (playing && state.audioCtx) {
+    return offset + (state.audioCtx.currentTime - startTime);
+  }
+  return offset;
+}
+
+// ── syncDeck: only adjusts rate + mutes master briefly. Never restarts. ──
+function syncDeck(slave) {
+  const master      = slave === 'A' ? 'B' : 'A';
+  const masterTrack = master === 'A' ? state.deckA : state.deckB;
+  const slaveTrack  = slave  === 'A' ? state.deckA : state.deckB;
+  if (!masterTrack || !slaveTrack) { toast('Load tracks on both decks first', 'warn'); return; }
+
+  const masterBpm = masterTrack.bpm || 120;
+  const slaveBpm  = slaveTrack.bpm  || 120;
+  const rate = Math.max(0.92, Math.min(1.08, masterBpm / slaveBpm));
+
+  // Mute master briefly so you only hear the syncing deck
+  const masterGain = master === 'A' ? state.deckANode : state.deckBNode;
+  if (masterGain && state.audioCtx) {
+    masterGain.gain.cancelScheduledValues(state.audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(0, state.audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(1, state.audioCtx.currentTime + 0.4);
+  }
+
+  // Apply pitch-matched rate to slave
+  if (slave === 'A') {
+    state.pitchA = rate;
+    if (state.deckASource) state.deckASource.playbackRate.value = rate;
+    document.getElementById('pitchA').value = (rate-1)*100;
+    document.getElementById('pitchAVal').textContent = ((rate-1)*100>=0?'+':'')+((rate-1)*100).toFixed(1)+'%';
+  } else {
+    state.pitchB = rate;
+    if (state.deckBSource) state.deckBSource.playbackRate.value = rate;
+    document.getElementById('pitchB').value = (rate-1)*100;
+    document.getElementById('pitchBVal').textContent = ((rate-1)*100>=0?'+':'')+((rate-1)*100).toFixed(1)+'%';
+  }
+
+  updateSyncStatus(slave);
+  const bpmDiff = Math.abs(masterBpm - slaveBpm);
+  toast(`Deck ${slave} synced — ${bpmDiff < 0.5 ? 'perfect match' : bpmDiff.toFixed(1)+' BPM Δ'}`, 'success', 2500);
+}
+
+function updateSyncStatus(slave) {
+  const master = slave === 'A' ? 'B' : 'A';
+  const mt = master === 'A' ? state.deckA : state.deckB;
+  const st = slave  === 'A' ? state.deckA : state.deckB;
+  if (!mt || !st) return;
+  const mBeatLen = 60 / (mt.bpm || 120);
+  const sBeatLen = 60 / (st.bpm || 120);
+  const btn = document.getElementById('sync' + slave);
+  const statusEl = document.getElementById('syncStatus' + slave);
+  function tick() {
+    if (!(state.deckAPlaying || state.deckBPlaying)) {
+      btn.classList.remove('synced'); statusEl.textContent = '—'; statusEl.style.color = 'var(--dim)'; return;
+    }
+    const mPhase = (getDeckPos(master) % mBeatLen) / mBeatLen;
+    const sPhase = (getDeckPos(slave)  % sBeatLen) / sBeatLen;
+    let diff = mPhase - sPhase;
+    if (diff > 0.5) diff -= 1; if (diff < -0.5) diff += 1;
+    const aligned = Math.abs(diff) < 0.06;
+    btn.classList.toggle('synced', aligned);
+    statusEl.textContent = aligned ? '✓ SYNC' : `${(Math.abs(diff)*100).toFixed(0)}% off`;
+    statusEl.style.color = aligned ? '#00c850' : Math.abs(diff) < 0.15 ? 'var(--yellow)' : 'var(--red)';
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+document.getElementById('syncA').addEventListener('click', () => syncDeck('A'));
+document.getElementById('syncB').addEventListener('click', () => syncDeck('B'));
+
+// ── Gentle drift correction every 150 ms — never restarts, just nudges rate ──
+(function autosyncLoop() {
+  setInterval(() => {
+    if (!state.deckAPlaying || !state.deckBPlaying || !state.deckA || !state.deckB) return;
+    const mBeatLen = 60 / (state.deckA.bpm || 120);
+    const sBeatLen = 60 / (state.deckB.bpm || 120);
+    const mPhase = (getDeckPos('A') % mBeatLen) / mBeatLen;
+    const sPhase = (getDeckPos('B') % sBeatLen) / sBeatLen;
+    let diff = mPhase - sPhase;
+    if (diff > 0.5) diff -= 1; if (diff < -0.5) diff += 1;
+    if (!state.deckBSource) return;
+    try {
+      // Max ±2% nudge — smooth, no audible glitch
+      const nudge = Math.abs(diff) > 0.06 ? Math.max(-0.02, Math.min(0.02, diff * 0.08)) : 0;
+      state.deckBSource.playbackRate.value = state.pitchB * (1 + nudge);
+    } catch(e) {}
+  }, 150);
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  PHASE METER (Lissajous-style circle)
+// ════════════════════════════════════════════════════════════════════
+(function setupPhaseMeter() {
+  const canvas = document.getElementById('phaseMeter');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, R = W / 2 - 4;
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, R, 0, Math.PI*2);
+    ctx.strokeStyle = '#1a2a44';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Reference tick marks (12, 3, 6, 9 o'clock)
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 - Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(W/2 + Math.cos(a) * (R-4), H/2 + Math.sin(a) * (R-4));
+      ctx.lineTo(W/2 + Math.cos(a) * R,     H/2 + Math.sin(a) * R);
+      ctx.strokeStyle = '#2a4060';
+      ctx.stroke();
+    }
+
+    const mt = state.deckA, st = state.deckB;
+    if (!mt || !st) {
+      ctx.fillStyle = 'var(--dim)';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('A B', W/2, H/2 + 3);
+      requestAnimationFrame(draw);
+      return;
+    }
+
+    const masterBeatLen = 60 / (mt.bpm || 120);
+    const slaveBeatLen  = 60 / (st.bpm || 120);
+
+    const mPhase = (getDeckPos('A') % masterBeatLen) / masterBeatLen; // 0..1
+    const sPhase = (getDeckPos('B') % slaveBeatLen)  / slaveBeatLen;
+
+    const mAngle = mPhase * Math.PI * 2 - Math.PI/2;
+    const sAngle = sPhase * Math.PI * 2 - Math.PI/2;
+
+    // Deck A dot (neon green)
+    const ax = W/2 + Math.cos(mAngle) * (R - 6);
+    const ay = H/2 + Math.sin(mAngle) * (R - 6);
+    ctx.beginPath();
+    ctx.arc(ax, ay, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#00ffc3';
+    ctx.shadowColor = '#00ffc3';
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Deck B dot (neon blue)
+    const bx = W/2 + Math.cos(sAngle) * (R - 6);
+    const by = H/2 + Math.sin(sAngle) * (R - 6);
+    ctx.beginPath();
+    ctx.arc(bx, by, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#00c8ff';
+    ctx.shadowColor = '#00c8ff';
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Phase diff arc
+    const diff = Math.abs(mPhase - sPhase);
+    const aligned = diff < 0.05 || diff > 0.95;
+    document.getElementById('phaseLabel').textContent = aligned ? '● IN SYNC' : 'PHASE';
+    document.getElementById('phaseLabel').style.color = aligned ? '#00c850' : 'var(--dim)';
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  BPM MATCH HIGHLIGHTS — show which tracks fit the playing deck
+// ════════════════════════════════════════════════════════════════════
+function highlightBpmMatches() {
+  // Reference BPM: whichever deck is playing (prefer A)
+  const refBpm = (state.deckAPlaying && state.deckA?.bpm)
+    ? state.deckA.bpm
+    : (state.deckBPlaying && state.deckB?.bpm)
+    ? state.deckB.bpm
+    : null;
+
+  document.querySelectorAll('.track-card').forEach(card => {
+    const idx   = parseInt(card.dataset.idx);
+    const track = state.tracks[idx];
+    // Remove old badges & classes
+    card.querySelectorAll('.bpm-match-badge,.bpm-close-badge').forEach(b => b.remove());
+    card.classList.remove('bpm-match', 'bpm-close');
+    if (!refBpm || !track?.bpm || track._status !== 'ready') return;
+
+    const diff = Math.abs(track.bpm - refBpm);
+    const pct  = diff / refBpm;
+
+    // Skip if this track IS one of the loaded decks
+    if (track === state.deckA || track === state.deckB) return;
+
+    if (pct < 0.02) {           // within 2 % — perfect match
+      card.classList.add('bpm-match');
+      const badge = document.createElement('span');
+      badge.className = 'bpm-match-badge'; badge.textContent = '✓ BPM';
+      card.querySelector('.track-meta')?.appendChild(badge);
+    } else if (pct < 0.08) {    // within 8 % — can pitch-shift to match
+      card.classList.add('bpm-close');
+      const badge = document.createElement('span');
+      badge.className = 'bpm-close-badge'; badge.textContent = '~BPM';
+      card.querySelector('.track-meta')?.appendChild(badge);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  WAVEFORM SEEK — click or drag to jump position
+// ════════════════════════════════════════════════════════════════════
+['A','B'].forEach(deck => {
+  const wrap = document.getElementById('waveWrap' + deck);
+  const seekBar = document.getElementById('seekBar' + deck);
+
+  function seekTo(e) {
+    const track = deck === 'A' ? state.deckA : state.deckB;
+    if (!track || !track.duration) return;
+    const rect = wrap.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const newPos = pct * track.duration;
+
+    // Update seek bar preview
+    seekBar.style.left = (pct * 100) + '%';
+
+    if (deck === 'A') state.deckAOffset = newPos;
+    else              state.deckBOffset = newPos;
+
+    // If playing, restart from new position
+    const wasPlaying = deck === 'A' ? state.deckAPlaying : state.deckBPlaying;
+    if (wasPlaying) {
+      stopDeck(deck);
+      playDeck(deck);
+    }
+  }
+
+  let dragging = false;
+  wrap.addEventListener('mouseenter', () => { seekBar.style.display = 'block'; });
+  wrap.addEventListener('mouseleave', () => { if (!dragging) seekBar.style.display = 'none'; });
+  wrap.addEventListener('mousemove', e => {
+    const rect = wrap.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seekBar.style.left = (pct * 100) + '%';
+    if (dragging) seekTo(e);
+  });
+  wrap.addEventListener('mousedown', e => { dragging = true; seekTo(e); });
+  window.addEventListener('mouseup',  () => { if (dragging) { dragging = false; seekBar.style.display = 'none'; } });
+});
+
+// Animate playhead on waveform
+(function animatePlayheads() {
+  function tick() {
+    ['A','B'].forEach(deck => {
+      const track   = deck === 'A' ? state.deckA : state.deckB;
+      const playing = deck === 'A' ? state.deckAPlaying : state.deckBPlaying;
+      const ph = document.getElementById('playhead' + deck);
+      if (!ph || !track || !track.duration) { if(ph) ph.style.left='0'; return; }
+      if (playing) {
+        const pos = getDeckPos(deck);
+        ph.style.left = Math.min(100, (pos / track.duration) * 100) + '%';
+      }
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  FILE UPLOAD — own beats
+// ════════════════════════════════════════════════════════════════════
+(function setupUpload() {
+  const dropEl   = document.getElementById('uploadDrop');
+  const fileInput = document.getElementById('fileInput');
+  const browseBtn = document.getElementById('browseBtn');
+  const progressWrap = document.getElementById('uploadProgress');
+  const progressBar  = document.getElementById('uploadProgressBar');
+
+  browseBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+  dropEl.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+  // Drag & drop
+  dropEl.addEventListener('dragover',  e => { e.preventDefault(); dropEl.classList.add('drag-over'); });
+  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag-over'));
+  dropEl.addEventListener('drop', e => {
+    e.preventDefault();
+    dropEl.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  async function handleFiles(files) {
+    for (const file of files) {
+      if (!file.type.startsWith('audio/') && !/\.(mp3|wav|aiff?|ogg|flac|m4a)$/i.test(file.name)) {
+        toast(`"${file.name}" is not a supported audio file`, 'warn');
+        continue;
+      }
+      await uploadFile(file);
+    }
+  }
+
+  async function uploadFile(file) {
+    const placeholder = {
+      track_id: 'upload_' + Date.now(),
+      title: file.name.replace(/\.[^.]+$/, ''),
+      url: '',
+      bpm: 0, duration: 0, energy: 0, key: '-',
+      thumbnail: '',
+      _status: 'analyzing',
+    };
+    state.tracks.push(placeholder);
+    renderTrackList();
+    toast(`⏳ Analyzing "${file.name}"…`, 'info', 60000);
+    setStatus('ANALYZING…');
+
+    // Show progress bar (indeterminate)
+    progressWrap.style.display = 'block';
+    let pct = 0;
+    const progTimer = setInterval(() => {
+      pct = Math.min(pct + 2, 90);
+      progressBar.style.width = pct + '%';
+    }, 400);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      clearInterval(progTimer);
+      progressBar.style.width = '100%';
+      setTimeout(() => { progressWrap.style.display = 'none'; progressBar.style.width = '0%'; }, 600);
+
+      const idx = state.tracks.findIndex(t => t.track_id === placeholder.track_id);
+      data._status = 'ready';
+      state.tracks[idx] = data;
+      renderTrackList();
+      saveTracks();
+      toast(`✓ "${data.title}" — ${data.bpm} BPM`, 'success');
+    } catch(err) {
+      clearInterval(progTimer);
+      progressWrap.style.display = 'none';
+      const idx = state.tracks.findIndex(t => t.track_id === placeholder.track_id);
+      if (idx !== -1) state.tracks[idx]._status = 'error';
+      renderTrackList();
+      toast('Upload failed: ' + err.message, 'error', 8000);
+    }
+    setStatus('READY');
+  }
+})();
+
+// ════════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════════
+loadTracks();        // restore from localStorage first
+renderTrackList();
+drawBeatCanvas();
+
+const SAMPLES = [
+  'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  'https://www.youtube.com/watch?v=9bZkp7q19f0',
+  'https://www.youtube.com/watch?v=JGwWNGJdvx8',
+];
+let sampleIdx = 0;
+setInterval(() => {
+  const inp = document.getElementById('urlInput');
+  if (!inp.value) inp.placeholder = 'e.g. ' + SAMPLES[sampleIdx++ % SAMPLES.length];
+}, 3000);
+
+window.addEventListener('resize', () => {
+  if (state.deckA) drawWaveform('A', state.deckA.waveform||[], state.deckA.beat_times||[]);
+  if (state.deckB) drawWaveform('B', state.deckB.waveform||[], state.deckB.beat_times||[]);
+  drawBeatCanvas();
+});
+</script>
+</body>
+</html>
