@@ -176,6 +176,7 @@ def analyze():
             'beat_times': beat_times[:64],
             'first_beat': round(first_beat_time, 3),
             'energy': round(energy_normalised, 3),
+            'rms_mean': round(energy, 6),   # absolute RMS — used for volume normalisation
             'energy_curve': energy_curve_norm,
             'beat_energies': beat_energies,
             'key': estimated_key,
@@ -214,7 +215,7 @@ def analyze():
 
 def _ensure_rich_analysis(track: dict) -> dict:
     """Re-analyse track from cached MP3 if new fields are missing (fast: 60s only)."""
-    if 'energy_curve' in track and 'first_beat' in track:
+    if 'energy_curve' in track and 'first_beat' in track and 'rms_mean' in track:
         return track
     mp3 = audio_path(track.get('track_id', ''))
     if not os.path.exists(mp3):
@@ -247,6 +248,7 @@ def _ensure_rich_analysis(track: dict) -> dict:
         track['first_beat']    = first_beat_time
         track['energy_curve']  = ec_norm
         track['beat_energies'] = be
+        track['rms_mean']      = round(float(np.mean(rms)), 6)
         # persist updated meta
         meta = meta_path(track.get('track_id', ''))
         if os.path.exists(meta):
@@ -376,9 +378,15 @@ def generate_mix():
     # Order tracks based on chosen variation
     tracks = _sort_variation(tracks, variation)
 
-    # Volume normalisation: bring each track to the playlist median energy
-    energies = [float(t.get('energy', 0.5)) for t in tracks]
-    target_energy = float(np.median(energies)) if energies else 0.5
+    # Volume normalisation: use absolute RMS (rms_mean) so clamping to [0,1] doesn't
+    # hide differences between loud tracks.  Fall back to energy_normalised / 20 for
+    # tracks analysed before rms_mean was stored.
+    def _rms(t):
+        if 'rms_mean' in t and float(t['rms_mean']) > 0:
+            return float(t['rms_mean'])
+        return float(t.get('energy', 0.5)) / 20.0   # rough reverse of * 20 normalisation
+    rms_values   = [_rms(t) for t in tracks]
+    target_rms   = float(np.median(rms_values)) if rms_values else 0.05
 
     sequence    = []
     transitions = []
@@ -390,7 +398,8 @@ def generate_mix():
         energy   = float(track.get('energy', 0.5))
         bar_dur  = 60.0 / bpm * 4
         # Normalisation gain: louder tracks are attenuated, quieter ones boosted
-        norm_gain = round(min(2.0, max(0.5, target_energy / energy)) if energy > 0 else 1.0, 3)
+        track_rms = _rms(track)
+        norm_gain = round(min(2.0, max(0.5, target_rms / track_rms)) if track_rms > 0 else 1.0, 3)
 
         # Where this track actually starts playing in the mix (skip intro)
         entry_offset = _find_entry_point(track)
