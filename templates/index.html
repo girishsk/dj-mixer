@@ -971,6 +971,8 @@ const state = {
   fxRate: 8,
   // Scratch
   scratchHistory: [],
+  // Track in-flight analysis requests
+  analyzingCount: 0,
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -1023,7 +1025,8 @@ async function addTrack(url) {
   state.tracks.push(placeholder);
   renderTrackList();
   toast('⏳ Downloading & analyzing… (may take 1-2 minutes)', 'info', 120000);
-  setStatus('ANALYZING…');
+  state.analyzingCount++;
+  setStatus(state.analyzingCount > 1 ? `ANALYZING… (${state.analyzingCount} tracks)` : 'ANALYZING…');
 
   try {
     const res = await fetch('/api/analyze', {
@@ -1046,8 +1049,14 @@ async function addTrack(url) {
     if (idx !== -1) state.tracks[idx]._status = 'error';
     renderTrackList();
     toast('Error: ' + err.message, 'error', 8000);
+  } finally {
+    state.analyzingCount--;
+    if (state.analyzingCount > 0) {
+      setStatus(`ANALYZING… (${state.analyzingCount} remaining)`);
+    } else {
+      setStatus('READY');
+    }
   }
-  setStatus('READY');
 }
 
 function renderTrackList() {

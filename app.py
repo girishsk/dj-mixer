@@ -5,6 +5,7 @@ import random
 import hashlib
 import re
 import traceback
+import threading
 from datetime import datetime
 import numpy as np
 from flask import Flask, request, jsonify, send_from_directory, render_template
@@ -12,6 +13,9 @@ from flask_cors import CORS
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
+
+# Serialize analysis/download requests — concurrent librosa runs compete for CPU/RAM
+_analysis_lock = threading.Lock()
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
 MIXES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mixes')
@@ -69,148 +73,157 @@ def analyze():
     mp3 = audio_path(track_id)
     meta = meta_path(track_id)
 
-    # ── 1. Download if not cached ─────────────────────────────────────────
-    if not os.path.exists(mp3):
+    # Fast path: return cached result without acquiring the lock
+    if os.path.exists(mp3) and os.path.exists(meta):
         try:
-            import yt_dlp
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': os.path.join(CACHE_DIR, f'{track_id}.%(ext)s'),
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'quiet': True,
-                'no_warnings': True,
-                'nocheckcertificate': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                title = info.get('title', track_id)
-                thumbnail = info.get('thumbnail', '')
-                duration_sec = info.get('duration', 0)
-        except Exception as e:
-            return jsonify({'error': f'Download failed: {str(e)}'}), 500
-    else:
-        # load cached meta
-        title = track_id
-        thumbnail = ''
-        duration_sec = 0
-        if os.path.exists(meta):
+            with open(meta) as f:
+                return jsonify(json.load(f))
+        except Exception:
+            pass  # fall through to re-analyse
+
+    # Serialize download + analysis — concurrent librosa runs saturate CPU/RAM
+    with _analysis_lock:
+        # Re-check cache: another request may have just finished while we waited
+        if os.path.exists(mp3) and os.path.exists(meta):
             try:
                 with open(meta) as f:
-                    cached = json.load(f)
-                return jsonify(cached)
+                    return jsonify(json.load(f))
             except Exception:
                 pass
 
-    # ── 2. Analyse with librosa ───────────────────────────────────────────
-    analysis = {}
-    try:
-        import librosa
-        y, sr = librosa.load(mp3, sr=22050, mono=True, duration=180)
+        # ── 1. Download if not cached ─────────────────────────────────────────
+        title = track_id
+        thumbnail = ''
+        duration_sec = 0
+        if not os.path.exists(mp3):
+            try:
+                import yt_dlp
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': os.path.join(CACHE_DIR, f'{track_id}.%(ext)s'),
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }],
+                    'quiet': True,
+                    'no_warnings': True,
+                    'nocheckcertificate': True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    title = info.get('title', track_id)
+                    thumbnail = info.get('thumbnail', '')
+                    duration_sec = info.get('duration', 0)
+            except Exception as e:
+                return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
-        tempo_arr, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        tempo = float(tempo_arr) if np.ndim(tempo_arr) == 0 else float(tempo_arr[0])
+        # ── 2. Analyse with librosa ───────────────────────────────────────────
+        analysis = {}
+        try:
+            import librosa
+            y, sr = librosa.load(mp3, sr=22050, mono=True, duration=180)
 
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr).tolist()
+            tempo_arr, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+            tempo = float(tempo_arr) if np.ndim(tempo_arr) == 0 else float(tempo_arr[0])
 
-        # First strong beat — skip silent/empty intro
-        rms = librosa.feature.rms(y=y)[0]
-        rms_times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=512)
-        rms_thresh = float(np.max(rms)) * 0.15
-        first_beat_time = 0.0
-        for bt in beat_times:
-            idx = np.searchsorted(rms_times, bt)
-            if idx < len(rms) and rms[idx] >= rms_thresh:
-                first_beat_time = round(float(bt), 3)
-                break
+            beat_times = librosa.frames_to_time(beat_frames, sr=sr).tolist()
 
-        energy = float(np.mean(rms))
-        energy_normalised = min(1.0, float(energy) * 20)
+            # First strong beat — skip silent/empty intro
+            rms = librosa.feature.rms(y=y)[0]
+            rms_times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=512)
+            rms_thresh = float(np.max(rms)) * 0.15
+            first_beat_time = 0.0
+            for bt in beat_times:
+                idx = np.searchsorted(rms_times, bt)
+                if idx < len(rms) and rms[idx] >= rms_thresh:
+                    first_beat_time = round(float(bt), 3)
+                    break
 
-        # chroma for key estimation
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
-        chroma_mean = np.mean(chroma, axis=1)
-        note_names = ['C', 'C#', 'D', 'D#', 'E', 'F',
-                      'F#', 'G', 'G#', 'A', 'A#', 'B']
-        estimated_key = note_names[int(np.argmax(chroma_mean))]
+            energy = float(np.mean(rms))
+            energy_normalised = min(1.0, float(energy) * 20)
 
-        # waveform (downsampled to 500 pts)
-        n_pts = 500
-        hop = max(1, len(y) // n_pts)
-        waveform = [float(np.max(np.abs(y[i:i+hop])))
-                    for i in range(0, len(y) - hop, hop)][:n_pts]
+            # chroma for key estimation
+            chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+            chroma_mean = np.mean(chroma, axis=1)
+            note_names = ['C', 'C#', 'D', 'D#', 'E', 'F',
+                          'F#', 'G', 'G#', 'A', 'A#', 'B']
+            estimated_key = note_names[int(np.argmax(chroma_mean))]
 
-        # duration
-        duration_sec = float(librosa.get_duration(y=y, sr=sr))
+            # waveform (downsampled to 500 pts)
+            n_pts = 500
+            hop = max(1, len(y) // n_pts)
+            waveform = [float(np.max(np.abs(y[i:i+hop])))
+                        for i in range(0, len(y) - hop, hop)][:n_pts]
 
-        # phrase length ≈ bars (4 beats/bar × tempo)
-        bar_duration = 60.0 / tempo * 4 if tempo > 0 else 4.0
-        phrase_8bars = bar_duration * 8
-        phrase_16bars = bar_duration * 16
+            # duration
+            duration_sec = float(librosa.get_duration(y=y, sr=sr))
 
-        key_bpm_suggestions = [
-            round(tempo * 0.5, 1),
-            round(tempo, 1),
-            round(tempo * 2, 1),
-        ]
+            # phrase length ≈ bars (4 beats/bar × tempo)
+            bar_duration = 60.0 / tempo * 4 if tempo > 0 else 4.0
+            phrase_8bars = bar_duration * 8
+            phrase_16bars = bar_duration * 16
 
-        # 32-point energy curve for mix planning
-        n_seg = 32
-        seg_len = max(1, len(rms) // n_seg)
-        energy_curve = [float(np.mean(rms[j*seg_len:(j+1)*seg_len]))
-                        for j in range(n_seg)]
-        ec_max = max(energy_curve) or 1
-        energy_curve_norm = [round(v / ec_max, 4) for v in energy_curve]
+            key_bpm_suggestions = [
+                round(tempo * 0.5, 1),
+                round(tempo, 1),
+                round(tempo * 2, 1),
+            ]
 
-        # Beat energies — RMS at each beat position
-        beat_energies = []
-        for bt in beat_times[:64]:
-            idx = int(np.searchsorted(rms_times, bt))
-            beat_energies.append(round(float(rms[min(idx, len(rms)-1)]) / (ec_max or 1), 4))
+            # 32-point energy curve for mix planning
+            n_seg = 32
+            seg_len = max(1, len(rms) // n_seg)
+            energy_curve = [float(np.mean(rms[j*seg_len:(j+1)*seg_len]))
+                            for j in range(n_seg)]
+            ec_max = max(energy_curve) or 1
+            energy_curve_norm = [round(v / ec_max, 4) for v in energy_curve]
 
-        analysis = {
-            'bpm': round(tempo, 1),
-            'beat_times': beat_times[:64],
-            'first_beat': round(first_beat_time, 3),
-            'energy': round(energy_normalised, 3),
-            'rms_mean': round(energy, 6),   # absolute RMS — used for volume normalisation
-            'energy_curve': energy_curve_norm,
-            'beat_energies': beat_energies,
-            'key': estimated_key,
-            'key_bpm_suggestions': key_bpm_suggestions,
-            'phrase_8bars': round(phrase_8bars, 2),
-            'phrase_16bars': round(phrase_16bars, 2),
-            'waveform': waveform,
+            # Beat energies — RMS at each beat position
+            beat_energies = []
+            for bt in beat_times[:64]:
+                idx = int(np.searchsorted(rms_times, bt))
+                beat_energies.append(round(float(rms[min(idx, len(rms)-1)]) / (ec_max or 1), 4))
+
+            analysis = {
+                'bpm': round(tempo, 1),
+                'beat_times': beat_times[:64],
+                'first_beat': round(first_beat_time, 3),
+                'energy': round(energy_normalised, 3),
+                'rms_mean': round(energy, 6),   # absolute RMS — used for volume normalisation
+                'energy_curve': energy_curve_norm,
+                'beat_energies': beat_energies,
+                'key': estimated_key,
+                'key_bpm_suggestions': key_bpm_suggestions,
+                'phrase_8bars': round(phrase_8bars, 2),
+                'phrase_16bars': round(phrase_16bars, 2),
+                'waveform': waveform,
+            }
+        except Exception as e:
+            analysis = {
+                'bpm': 120.0,
+                'beat_times': [],
+                'energy': 0.5,
+                'key': 'C',
+                'key_bpm_suggestions': [60.0, 120.0, 240.0],
+                'phrase_8bars': 16.0,
+                'phrase_16bars': 32.0,
+                'waveform': [],
+                'analysis_error': str(e),
+            }
+
+        result = {
+            'track_id': track_id,
+            'title': title,
+            'url': url,
+            'thumbnail': thumbnail,
+            'duration': round(duration_sec, 2),
+            **analysis,
         }
-    except Exception as e:
-        analysis = {
-            'bpm': 120.0,
-            'beat_times': [],
-            'energy': 0.5,
-            'key': 'C',
-            'key_bpm_suggestions': [60.0, 120.0, 240.0],
-            'phrase_8bars': 16.0,
-            'phrase_16bars': 32.0,
-            'waveform': [],
-            'analysis_error': str(e),
-        }
 
-    result = {
-        'track_id': track_id,
-        'title': title,
-        'url': url,
-        'thumbnail': thumbnail,
-        'duration': round(duration_sec, 2),
-        **analysis,
-    }
+        with open(meta, 'w') as f:
+            json.dump(result, f)
 
-    with open(meta, 'w') as f:
-        json.dump(result, f)
-
-    return jsonify(result)
+        return jsonify(result)
 
 
 def _ensure_rich_analysis(track: dict) -> dict:
