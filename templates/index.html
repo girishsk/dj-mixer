@@ -1918,6 +1918,10 @@ async function playMix() {
 
   stopMix();
 
+  const playBtn = document.getElementById('playMixBtn');
+  playBtn.disabled = true;
+  playBtn.textContent = '▶ LOADING…';
+
   const plan = state.mixPlan;
   const ready = plan.sequence.filter(s => s.track_id);
 
@@ -1932,6 +1936,8 @@ async function playMix() {
     } catch(e) {
       toast(`Could not load "${seg.title}": ${e.message}`, 'error');
       setStatus('READY');
+      playBtn.disabled = false;
+      playBtn.textContent = '▶ PLAY MIX';
       return;
     }
   }
@@ -1970,7 +1976,8 @@ async function playMix() {
     const trackStart = baseTime + seg.start_time;
     const trackEnd   = baseTime + seg.end_time;
 
-    // Gain envelope
+    // Gain envelope (seg.gain normalises volume across tracks)
+    const normGain   = seg.gain || 1.0;
     const fadeInDur  = crossfadeIn[seg.track_id] || 0;
     const fadeOutDur = seg.crossfade_out || 0;
     const transOutAt = baseTime + seg.transition_out;
@@ -1978,13 +1985,13 @@ async function playMix() {
     gain.gain.cancelScheduledValues(trackStart);
     if (fadeInDur > 0) {
       gain.gain.setValueAtTime(0, trackStart);
-      gain.gain.linearRampToValueAtTime(1.0, trackStart + fadeInDur);
+      gain.gain.linearRampToValueAtTime(normGain, trackStart + fadeInDur);
     } else {
-      gain.gain.setValueAtTime(1.0, trackStart);
+      gain.gain.setValueAtTime(normGain, trackStart);
     }
 
     if (i < plan.sequence.length - 1 && fadeOutDur > 0) {
-      gain.gain.setValueAtTime(1.0, transOutAt);
+      gain.gain.setValueAtTime(normGain, transOutAt);
       gain.gain.linearRampToValueAtTime(0, transOutAt + fadeOutDur);
     }
 
@@ -2139,16 +2146,17 @@ async function playMixFrom(fromIndex) {
     src.playbackRate.value = seg.playback_rate || 1.0;
     src.connect(gain);
 
+    const normGain   = seg.gain || 1.0;
     const trackStart = baseTime + (seg.start_time - startOffset);
     const fadeInDur  = isFirst ? 0 : (crossfadeIn[seg.track_id] || 0);
     const fadeOutDur = seg.crossfade_out || 0;
     const transOutAt = baseTime + (seg.transition_out - startOffset);
 
     gain.gain.cancelScheduledValues(trackStart);
-    gain.gain.setValueAtTime(fadeInDur > 0 ? 0 : 1, trackStart);
-    if (fadeInDur > 0) gain.gain.linearRampToValueAtTime(1, trackStart + fadeInDur);
+    gain.gain.setValueAtTime(fadeInDur > 0 ? 0 : normGain, trackStart);
+    if (fadeInDur > 0) gain.gain.linearRampToValueAtTime(normGain, trackStart + fadeInDur);
     if (idx < segs.length - 1 && fadeOutDur > 0) {
-      gain.gain.setValueAtTime(1, transOutAt);
+      gain.gain.setValueAtTime(normGain, transOutAt);
       gain.gain.linearRampToValueAtTime(0, transOutAt + fadeOutDur);
     }
 

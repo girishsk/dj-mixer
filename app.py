@@ -376,6 +376,10 @@ def generate_mix():
     # Order tracks based on chosen variation
     tracks = _sort_variation(tracks, variation)
 
+    # Volume normalisation: bring each track to the playlist median energy
+    energies = [float(t.get('energy', 0.5)) for t in tracks]
+    target_energy = float(np.median(energies)) if energies else 0.5
+
     sequence    = []
     transitions = []
     cursor      = 0.0   # mix timeline cursor (seconds)
@@ -385,6 +389,8 @@ def generate_mix():
         duration = float(track.get('duration', 180))
         energy   = float(track.get('energy', 0.5))
         bar_dur  = 60.0 / bpm * 4
+        # Normalisation gain: louder tracks are attenuated, quieter ones boosted
+        norm_gain = round(min(2.0, max(0.5, target_energy / energy)) if energy > 0 else 1.0, 3)
 
         # Where this track actually starts playing in the mix (skip intro)
         entry_offset = _find_entry_point(track)
@@ -426,6 +432,7 @@ def generate_mix():
             'transition_out': round(mix_trans_out, 2),
             'crossfade_out': crossfade_dur,
             'playback_rate': playback_rate,
+            'gain':          norm_gain,
         }
         sequence.append(entry)
 
